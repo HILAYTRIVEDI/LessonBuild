@@ -63,7 +63,11 @@ export async function recordAttempt(input: {
 export async function getAttempts(
   lessonId: string,
 ): Promise<{ objectiveTitle: string; isCorrect: boolean; attemptNo: number }[]> {
-  const { rows } = await query<{ objective_title: string; is_correct: boolean; attempt_no: number }>(
+  const { rows } = await query<{
+    objective_title: string;
+    is_correct: boolean;
+    attempt_no: number;
+  }>(
     `SELECT o.title AS objective_title, a.is_correct, a.attempt_no
      FROM attempts a
      JOIN questions q ON q.id = a.question_id
