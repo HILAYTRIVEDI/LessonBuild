@@ -1,0 +1,18 @@
+{
+  "name": "@lessonbuild/db",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "migrate": "tsx src/migrate.ts"
+  },
+  "dependencies": {
+    "pg": "^8.13.0",
+    "@lessonbuild/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0"
+  }
+}
