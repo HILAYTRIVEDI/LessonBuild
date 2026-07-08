@@ -10,7 +10,9 @@ describe("LessonPlanSchema", () => {
     expect(LessonPlanSchema.parse(plan)).toEqual(plan);
   });
   it("rejects an empty objective list", () => {
-    expect(() => LessonPlanSchema.parse({ overallDifficulty: "beginner", objectives: [] })).toThrow();
+    expect(() =>
+      LessonPlanSchema.parse({ overallDifficulty: "beginner", objectives: [] }),
+    ).toThrow();
   });
 });
 
@@ -20,7 +22,13 @@ describe("McqSchema", () => {
     expect(() => McqSchema.parse(bad)).toThrow();
   });
   it("accepts a valid 4-choice question", () => {
-    const q = { stem: "Q", choices: ["a", "b", "c", "d"], correctIndex: 2, explanation: "x", hint: "y" };
+    const q = {
+      stem: "Q",
+      choices: ["a", "b", "c", "d"],
+      correctIndex: 2,
+      explanation: "x",
+      hint: "y",
+    };
     expect(McqSchema.parse(q)).toEqual(q);
   });
 });
