@@ -1,0 +1,5 @@
+{
+  "dependencies": ["."],
+  "graphs": { "lesson": "./src/graph.ts:graph" },
+  "env": ".env"
+}
