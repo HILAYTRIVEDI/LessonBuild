@@ -8,8 +8,14 @@ describe("generateQuestionsNode", () => {
     const q = { stem: "Q", choices: ["a", "b", "c"], correctIndex: 1, explanation: "e", hint: "h" };
     const model = { withStructuredOutput: () => ({ invoke: async () => ({ questions: [q, q] }) }) };
     const state = {
-      docText: "t", lessonId: "L1", currentObjectiveIdx: 0, objectiveIds: ["obj-1"],
-      lessonPlan: { overallDifficulty: "beginner", objectives: [{ title: "A", difficulty: "beginner", description: "d" }] },
+      docText: "t",
+      lessonId: "L1",
+      currentObjectiveIdx: 0,
+      objectiveIds: ["obj-1"],
+      lessonPlan: {
+        overallDifficulty: "beginner",
+        objectives: [{ title: "A", difficulty: "beginner", description: "d" }],
+      },
     };
     const out = await generateQuestionsNode(state as never, model as never);
     expect(out.questions).toHaveLength(2);
