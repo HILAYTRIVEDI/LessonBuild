@@ -1,4 +1,10 @@
 import { createServer } from "node:http";
+import { runMigrations } from "@lessonbuild/db";
+
+await runMigrations().catch((e: unknown) => {
+  console.error("migration failed", e);
+  process.exit(1);
+});
 
 // Lightweight health endpoint for Docker; the LangGraph CLI serves the graph itself in dev.
 const port = Number(process.env["AGENT_HEALTH_PORT"] ?? 2024);

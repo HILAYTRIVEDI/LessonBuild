@@ -4,21 +4,24 @@
   "type": "module",
   "scripts": {
     "dev": "langgraphjs dev --port 2024",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
     "@langchain/langgraph-checkpoint-postgres": "^0.0.4",
-    "@langchain/core": "^0.3.0",
     "@langchain/openai": "^0.3.0",
-    "@lessonbuild/shared": "workspace:*",
     "@lessonbuild/db": "workspace:*",
+    "@lessonbuild/shared": "workspace:*",
+    "pg": "^8.13.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
     "@langchain/langgraph-cli": "^0.0.10",
+    "tsup": "^8.5.1",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }
