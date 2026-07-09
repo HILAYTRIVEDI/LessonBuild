@@ -12,6 +12,7 @@
   "dependencies": {
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
+    "@langchain/langgraph-api": "^0.0.10",
     "@langchain/langgraph-checkpoint-postgres": "^0.0.4",
     "@langchain/openai": "^0.3.0",
     "@lessonbuild/db": "workspace:*",

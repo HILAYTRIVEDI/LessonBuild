@@ -41,6 +41,9 @@ importers:
       '@langchain/langgraph':
         specifier: ^0.2.0
         version: 0.2.74(@langchain/core@0.3.80(@opentelemetry/api@1.9.1)(openai@4.104.0(ws@8.21.0)(zod@3.25.76)))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))
+      '@langchain/langgraph-api':
+        specifier: ^0.0.10
+        version: 0.0.10(@langchain/core@0.3.80(@opentelemetry/api@1.9.1)(openai@4.104.0(ws@8.21.0)(zod@3.25.76)))(@langchain/langgraph@0.2.74(@langchain/core@0.3.80(@opentelemetry/api@1.9.1)(openai@4.104.0(ws@8.21.0)(zod@3.25.76)))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76)))(openai@4.104.0(ws@8.21.0)(zod@3.25.76))(typescript@5.9.3)
       '@langchain/langgraph-checkpoint-postgres':
         specifier: ^0.0.4
         version: 0.0.4(@langchain/core@0.3.80(@opentelemetry/api@1.9.1)(openai@4.104.0(ws@8.21.0)(zod@3.25.76)))
