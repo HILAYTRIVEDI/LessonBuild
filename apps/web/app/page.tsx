@@ -54,6 +54,7 @@ export default function Home() {
         <McqWidget
           stem={event.value.stem}
           choices={event.value.choices}
+          {...(event.value.feedback ? { feedback: event.value.feedback } : {})}
           onSubmit={(selectedIndex) => respond({ selectedIndex })}
         />
       );
