@@ -1,6 +1,7 @@
 import { StateGraph, START, END } from "@langchain/langgraph";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { LessonState } from "./state.js";
+import { hydrateNode } from "./nodes/hydrate.js";
 import { planNode } from "./nodes/plan.js";
 import { approvePlanNode } from "./nodes/approvePlan.js";
 import { generateQuestionsNode } from "./nodes/generateQuestions.js";
@@ -11,6 +12,7 @@ import { summarizeNode } from "./nodes/summarize.js";
 
 export function buildGraph(checkpointer?: BaseCheckpointSaver) {
   const workflow = new StateGraph(LessonState)
+    .addNode("hydrate", (state) => hydrateNode(state))
     .addNode("plan", (state) => planNode(state))
     .addNode("approvePlan", approvePlanNode)
     .addNode("generateQuestions", (state) => generateQuestionsNode(state))
@@ -18,7 +20,8 @@ export function buildGraph(checkpointer?: BaseCheckpointSaver) {
     .addNode("evaluate", evaluateNode)
     .addNode("advance", advanceNode)
     .addNode("summarize", (state) => summarizeNode(state))
-    .addEdge(START, "plan")
+    .addEdge(START, "hydrate")
+    .addEdge("hydrate", "plan")
     .addEdge("plan", "approvePlan")
     .addEdge("approvePlan", "generateQuestions")
     .addEdge("generateQuestions", "askQuestion")

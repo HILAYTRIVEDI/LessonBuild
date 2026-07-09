@@ -42,5 +42,5 @@ COPY --from=build --chown=agent:nodejs /app/packages/db/migrations ./apps/agent/
 USER agent
 EXPOSE 2024
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-  CMD wget -qO- http://localhost:2024/ok || exit 1
+  CMD wget -qO- http://localhost:2024/info || exit 1
 CMD ["node", "apps/agent/dist/server.js"]
