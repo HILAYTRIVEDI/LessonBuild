@@ -4,11 +4,11 @@
 
 /* Theme CopilotKit UI to the palette (solid colors, no gradients). */
 :root {
-  --copilot-kit-primary-color: #0D99FF;
-  --copilot-kit-background-color: #FFFFFF;
-  --copilot-kit-separator-color: #E6E6E8;
+  --copilot-kit-primary-color: #0d99ff;
+  --copilot-kit-background-color: #ffffff;
+  --copilot-kit-separator-color: #e6e6e8;
 }
 body {
   color: #404040;
-  background: #FFFFFF;
+  background: #ffffff;
 }

@@ -33,7 +33,10 @@ export default function Home() {
         <input type="file" accept="application/pdf" className="hidden" onChange={onUpload} />
         {busy ? "Processing…" : lessonId ? `Lesson ready: ${lessonId}` : "Click to choose a PDF"}
       </label>
-      <CopilotSidebar defaultOpen labels={{ title: "Lesson Coach", initial: "Upload a PDF, then say 'start'." }} />
+      <CopilotSidebar
+        defaultOpen
+        labels={{ title: "Lesson Coach", initial: "Upload a PDF, then say 'start'." }}
+      />
     </main>
   );
 }
