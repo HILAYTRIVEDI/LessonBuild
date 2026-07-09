@@ -1,7 +1,7 @@
 // Requires a running Postgres locally (`docker compose up postgres -d`); CI has a postgres service.
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { runMigrations } from "./migrate.js";
-import { pool } from "./client.js";
+import { runMigrations } from "./migrate";
+import { pool } from "./client";
 import {
   createLesson,
   getLesson,
@@ -9,7 +9,7 @@ import {
   saveQuestion,
   recordAttempt,
   getAttempts,
-} from "./lessons.js";
+} from "./lessons";
 
 beforeAll(async () => {
   await runMigrations();

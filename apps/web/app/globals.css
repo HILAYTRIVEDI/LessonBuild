@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme CopilotKit UI to the palette (solid colors, no gradients). */
+:root {
+  --copilot-kit-primary-color: #0d99ff;
+  --copilot-kit-background-color: #ffffff;
+  --copilot-kit-separator-color: #e6e6e8;
+}
+body {
+  color: #404040;
+  background: #ffffff;
+}

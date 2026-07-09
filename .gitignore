@@ -7,6 +7,8 @@ node_modules/
 dist/
 build/
 out/
+next-env.d.ts
+*.tsbuildinfo
 
 # ---- Env / secrets ----
 .env

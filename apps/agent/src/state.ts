@@ -3,7 +3,10 @@ import type { BaseMessage } from "@langchain/core/messages";
 import type { LessonPlan, Mcq } from "@lessonbuild/shared";
 
 export type AttemptRecord = {
-  questionIdx: number; selectedIndex: number; isCorrect: boolean; attemptNo: number;
+  questionIdx: number;
+  selectedIndex: number;
+  isCorrect: boolean;
+  attemptNo: number;
 };
 
 export const LessonState = Annotation.Root({
@@ -17,7 +20,8 @@ export const LessonState = Annotation.Root({
   questionIds: Annotation<string[]>({ reducer: (_, n) => n, default: () => [] }),
   currentQuestionIdx: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
   attempts: Annotation<AttemptRecord[]>({
-    reducer: (a, b) => a.concat(b), default: () => [],
+    reducer: (a, b) => a.concat(b),
+    default: () => [],
   }),
   report: Annotation<string | null>({ reducer: (_, n) => n, default: () => null }),
   messages: Annotation<BaseMessage[]>({ reducer: messagesStateReducer, default: () => [] }),
