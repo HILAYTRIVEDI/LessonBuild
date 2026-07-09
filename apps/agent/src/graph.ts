@@ -5,19 +5,25 @@ import { planNode } from "./nodes/plan.js";
 import { approvePlanNode } from "./nodes/approvePlan.js";
 import { generateQuestionsNode } from "./nodes/generateQuestions.js";
 import { askQuestionNode } from "./nodes/askQuestion.js";
+import { evaluateNode, routeAfterEvaluate } from "./nodes/evaluate.js";
 
-// Further nodes are added in later tasks; end after askQuestion for now.
+// The `advance` node is added in a later task; route to END there for now.
 export function buildGraph(checkpointer?: BaseCheckpointSaver) {
   const workflow = new StateGraph(LessonState)
     .addNode("plan", (state) => planNode(state))
     .addNode("approvePlan", approvePlanNode)
     .addNode("generateQuestions", (state) => generateQuestionsNode(state))
     .addNode("askQuestion", askQuestionNode)
+    .addNode("evaluate", evaluateNode)
     .addEdge(START, "plan")
     .addEdge("plan", "approvePlan")
     .addEdge("approvePlan", "generateQuestions")
     .addEdge("generateQuestions", "askQuestion")
-    .addEdge("askQuestion", END);
+    .addEdge("askQuestion", "evaluate")
+    .addConditionalEdges("evaluate", routeAfterEvaluate, {
+      advance: END,
+      askQuestion: "askQuestion",
+    });
   return workflow.compile(checkpointer ? { checkpointer } : undefined);
 }
 
