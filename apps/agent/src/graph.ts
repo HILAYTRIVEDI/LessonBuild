@@ -3,15 +3,18 @@ import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { LessonState } from "./state.js";
 import { planNode } from "./nodes/plan.js";
 import { approvePlanNode } from "./nodes/approvePlan.js";
+import { generateQuestionsNode } from "./nodes/generateQuestions.js";
 
-// Further nodes are added in later tasks; end after approvePlan for now.
+// Further nodes are added in later tasks; end after generateQuestions for now.
 export function buildGraph(checkpointer?: BaseCheckpointSaver) {
   const workflow = new StateGraph(LessonState)
     .addNode("plan", (state) => planNode(state))
     .addNode("approvePlan", approvePlanNode)
+    .addNode("generateQuestions", (state) => generateQuestionsNode(state))
     .addEdge(START, "plan")
     .addEdge("plan", "approvePlan")
-    .addEdge("approvePlan", END);
+    .addEdge("approvePlan", "generateQuestions")
+    .addEdge("generateQuestions", END);
   return workflow.compile(checkpointer ? { checkpointer } : undefined);
 }
 
