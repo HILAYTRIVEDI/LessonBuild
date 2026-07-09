@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
 import { CopilotSidebar } from "@copilotkit/react-ui";
+import { useLangGraphInterrupt } from "@copilotkit/react-core";
+import type { ApprovePlanEvent, ApprovePlanResponse } from "@lessonbuild/shared";
+import { PlanApprovalCard } from "@/components/PlanApprovalCard";
 
 export default function Home() {
   const [lessonId, setLessonId] = useState<string | null>(null);
@@ -24,6 +27,17 @@ export default function Home() {
     }
     setBusy(false);
   }
+
+  useLangGraphInterrupt<ApprovePlanEvent>({
+    render: ({ event, resolve }) => {
+      if (event.value.type !== "approve_plan" || !event.value.plan) return "";
+      // CopilotKit types `resolve` as (resolution: string) => void, but for this
+      // legacy `interrupt()`-based flow the payload is forwarded untouched as the
+      // LangGraph `Command({ resume })` value, so we pass the structured response.
+      const respond = resolve as unknown as (response: ApprovePlanResponse) => void;
+      return <PlanApprovalCard plan={event.value.plan} onRespond={respond} />;
+    },
+  });
 
   return (
     <main className="mx-auto max-w-2xl p-12">
