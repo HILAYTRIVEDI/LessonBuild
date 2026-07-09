@@ -1,13 +1,14 @@
 import { StateGraph, START, END } from "@langchain/langgraph";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { LessonState } from "./state.js";
+import { planNode } from "./nodes/plan.js";
 
-// Nodes are added in later tasks; start with a pass-through so wiring is testable.
+// Further nodes are added in later tasks; end after plan for now.
 export function buildGraph(checkpointer?: BaseCheckpointSaver) {
   const workflow = new StateGraph(LessonState)
-    .addNode("noop", async (state) => ({ docText: state.docText }))
-    .addEdge(START, "noop")
-    .addEdge("noop", END);
+    .addNode("plan", (state) => planNode(state))
+    .addEdge(START, "plan")
+    .addEdge("plan", END);
   return workflow.compile(checkpointer ? { checkpointer } : undefined);
 }
 
