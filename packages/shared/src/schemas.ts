@@ -26,7 +26,19 @@ export const McqSchema = z
     path: ["correctIndex"],
   });
 
+export const ApprovePlanEventSchema = z.object({
+  type: z.string(),
+  plan: LessonPlanSchema.nullable(),
+});
+
+export const ApprovePlanResponseSchema = z.object({
+  approved: z.boolean(),
+  plan: LessonPlanSchema.optional(),
+});
+
 export type Difficulty = z.infer<typeof DifficultySchema>;
 export type Objective = z.infer<typeof ObjectiveSchema>;
 export type LessonPlan = z.infer<typeof LessonPlanSchema>;
 export type Mcq = z.infer<typeof McqSchema>;
+export type ApprovePlanEvent = z.infer<typeof ApprovePlanEventSchema>;
+export type ApprovePlanResponse = z.infer<typeof ApprovePlanResponseSchema>;
