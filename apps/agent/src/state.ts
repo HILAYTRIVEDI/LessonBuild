@@ -23,6 +23,7 @@ export const LessonState = Annotation.Root({
     reducer: (a, b) => a.concat(b),
     default: () => [],
   }),
+  lastSelectedIndex: Annotation<number | null>({ reducer: (_, n) => n, default: () => null }),
   report: Annotation<string | null>({ reducer: (_, n) => n, default: () => null }),
   messages: Annotation<BaseMessage[]>({ reducer: messagesStateReducer, default: () => [] }),
 });

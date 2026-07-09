@@ -2,8 +2,14 @@
 import { useState } from "react";
 import { CopilotSidebar } from "@copilotkit/react-ui";
 import { useLangGraphInterrupt } from "@copilotkit/react-core";
-import type { ApprovePlanEvent, ApprovePlanResponse } from "@lessonbuild/shared";
+import type {
+  ApprovePlanEvent,
+  ApprovePlanResponse,
+  AskQuestionEvent,
+  AskQuestionResponse,
+} from "@lessonbuild/shared";
 import { PlanApprovalCard } from "@/components/PlanApprovalCard";
+import { McqWidget } from "@/components/McqWidget";
 
 export default function Home() {
   const [lessonId, setLessonId] = useState<string | null>(null);
@@ -36,6 +42,21 @@ export default function Home() {
       // LangGraph `Command({ resume })` value, so we pass the structured response.
       const respond = resolve as unknown as (response: ApprovePlanResponse) => void;
       return <PlanApprovalCard plan={event.value.plan} onRespond={respond} />;
+    },
+  });
+
+  useLangGraphInterrupt<AskQuestionEvent>({
+    render: ({ event, resolve }) => {
+      if (event.value.type !== "ask_mcq") return "";
+      // Same untyped-resolve situation as the approve_plan interrupt above.
+      const respond = resolve as unknown as (response: AskQuestionResponse) => void;
+      return (
+        <McqWidget
+          stem={event.value.stem}
+          choices={event.value.choices}
+          onSubmit={(selectedIndex) => respond({ selectedIndex })}
+        />
+      );
     },
   });
 

@@ -36,9 +36,22 @@ export const ApprovePlanResponseSchema = z.object({
   plan: LessonPlanSchema.optional(),
 });
 
+export const AskQuestionEventSchema = z.object({
+  type: z.string(),
+  stem: z.string(),
+  choices: z.array(z.string()),
+  questionIdx: z.number().int().nonnegative(),
+});
+
+export const AskQuestionResponseSchema = z.object({
+  selectedIndex: z.number().int().nonnegative(),
+});
+
 export type Difficulty = z.infer<typeof DifficultySchema>;
 export type Objective = z.infer<typeof ObjectiveSchema>;
 export type LessonPlan = z.infer<typeof LessonPlanSchema>;
 export type Mcq = z.infer<typeof McqSchema>;
 export type ApprovePlanEvent = z.infer<typeof ApprovePlanEventSchema>;
 export type ApprovePlanResponse = z.infer<typeof ApprovePlanResponseSchema>;
+export type AskQuestionEvent = z.infer<typeof AskQuestionEventSchema>;
+export type AskQuestionResponse = z.infer<typeof AskQuestionResponseSchema>;
