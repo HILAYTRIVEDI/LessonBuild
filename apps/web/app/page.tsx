@@ -1,7 +1,11 @@
 "use client";
 import { useState } from "react";
 import { CopilotSidebar } from "@copilotkit/react-ui";
-import { useLangGraphInterrupt } from "@copilotkit/react-core";
+import {
+  useLangGraphInterrupt,
+  useCopilotReadable,
+  useCopilotAdditionalInstructions,
+} from "@copilotkit/react-core";
 import type {
   ApprovePlanEvent,
   ApprovePlanResponse,
@@ -10,10 +14,19 @@ import type {
 } from "@lessonbuild/shared";
 import { PlanApprovalCard } from "@/components/PlanApprovalCard";
 import { McqWidget } from "@/components/McqWidget";
+import { HINT_GUARDRAIL_INSTRUCTIONS, toGuardrailReadable } from "@/lib/guardrail";
 
 export default function Home() {
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [activeQuestion, setActiveQuestion] = useState<AskQuestionEvent | null>(null);
+
+  useCopilotAdditionalInstructions({ instructions: HINT_GUARDRAIL_INSTRUCTIONS });
+
+  useCopilotReadable({
+    description: "The learner's currently active question, with a prior hint if any.",
+    value: activeQuestion ? toGuardrailReadable(activeQuestion) : null,
+  });
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -48,6 +61,7 @@ export default function Home() {
   useLangGraphInterrupt<AskQuestionEvent>({
     render: ({ event, resolve }) => {
       if (event.value.type !== "ask_mcq") return "";
+      if (activeQuestion !== event.value) setActiveQuestion(event.value);
       // Same untyped-resolve situation as the approve_plan interrupt above.
       const respond = resolve as unknown as (response: AskQuestionResponse) => void;
       return (
