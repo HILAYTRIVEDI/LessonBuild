@@ -19,6 +19,7 @@ import { ProgressReport } from "@/components/ProgressReport";
 import { HINT_GUARDRAIL_INSTRUCTIONS, toGuardrailReadable } from "@/lib/guardrail";
 
 type LessonAgentState = {
+  lessonId: string | null;
   report: string | null;
 };
 
@@ -26,9 +27,9 @@ export default function Home() {
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [activeQuestion, setActiveQuestion] = useState<AskQuestionEvent | null>(null);
-  const { state: agentState } = useCoAgent<LessonAgentState>({
+  const { state: agentState, setState: setAgentState } = useCoAgent<LessonAgentState>({
     name: "lesson",
-    initialState: { report: null },
+    initialState: { lessonId: null, report: null },
   });
 
   useCopilotAdditionalInstructions({ instructions: HINT_GUARDRAIL_INSTRUCTIONS });
@@ -52,7 +53,11 @@ export default function Home() {
       "lessonId" in json &&
       typeof (json as { lessonId: unknown }).lessonId === "string"
     ) {
-      setLessonId((json as { lessonId: string }).lessonId);
+      const id = (json as { lessonId: string }).lessonId;
+      setLessonId(id);
+      // Thread the lessonId into the agent's state so the graph's hydrate node
+      // can load the uploaded document from Postgres on the next run.
+      setAgentState((prev) => ({ report: prev?.report ?? null, lessonId: id }));
     }
     setBusy(false);
   }
