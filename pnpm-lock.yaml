@@ -53,6 +53,9 @@ importers:
       '@lessonbuild/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
     devDependencies:
       '@langchain/langgraph-cli':
         specifier: ^0.0.10

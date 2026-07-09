@@ -14,7 +14,8 @@
     "@langchain/core": "^0.3.0",
     "@langchain/openai": "^0.3.0",
     "@lessonbuild/shared": "workspace:*",
-    "@lessonbuild/db": "workspace:*"
+    "@lessonbuild/db": "workspace:*",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@langchain/langgraph-cli": "^0.0.10",
