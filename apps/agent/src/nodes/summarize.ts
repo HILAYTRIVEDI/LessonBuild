@@ -20,8 +20,15 @@ export async function summarizeNode(
 ): Promise<Partial<LessonStateType>> {
   const score = computeScore(state.attempts, state.questions.length || state.attempts.length);
   const tips = await model.invoke([
-    { role: "system", content: "You are a supportive study coach. Given the learner's per-question attempt history, write 3 short, specific, encouraging study tips. Do not reveal any answer keys." },
-    { role: "user", content: `Objectives: ${JSON.stringify(state.lessonPlan?.objectives)}\nAttempts: ${JSON.stringify(state.attempts)}` },
+    {
+      role: "system",
+      content:
+        "You are a supportive study coach. Given the learner's per-question attempt history, write 3 short, specific, encouraging study tips. Do not reveal any answer keys.",
+    },
+    {
+      role: "user",
+      content: `Objectives: ${JSON.stringify(state.lessonPlan?.objectives)}\nAttempts: ${JSON.stringify(state.attempts)}`,
+    },
   ]);
   const tipsText = typeof tips.content === "string" ? tips.content : JSON.stringify(tips.content);
   const report = `You answered ${score.firstTryCorrect}/${score.total} correctly on the first try.\n\n${tipsText}`;

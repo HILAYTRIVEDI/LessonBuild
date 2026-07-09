@@ -17,11 +17,17 @@ describe("computeScore", () => {
 describe("summarizeNode", () => {
   it("produces a report string with study tips", async () => {
     const model = { invoke: async () => ({ content: "Tip: review objective 2." }) };
-    const out = await summarizeNode({
-      attempts: [{ questionIdx: 0, isCorrect: true, attemptNo: 1, selectedIndex: 1 }],
-      questions: [{ stem: "Q", choices: ["a"], correctIndex: 0, explanation: "", hint: "" }],
-      lessonPlan: { overallDifficulty: "beginner", objectives: [{ title: "A", difficulty: "beginner", description: "d" }] },
-    } as never, model as never);
+    const out = await summarizeNode(
+      {
+        attempts: [{ questionIdx: 0, isCorrect: true, attemptNo: 1, selectedIndex: 1 }],
+        questions: [{ stem: "Q", choices: ["a"], correctIndex: 0, explanation: "", hint: "" }],
+        lessonPlan: {
+          overallDifficulty: "beginner",
+          objectives: [{ title: "A", difficulty: "beginner", description: "d" }],
+        },
+      } as never,
+      model as never,
+    );
     expect(out.report).toContain("Tip");
   });
 });

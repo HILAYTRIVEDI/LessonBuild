@@ -8,7 +8,13 @@ export function ProgressReport({ report }: { report: string }) {
       </div>
       <h3 className="mt-3 text-lg font-bold">{headline}</h3>
       <div className="mt-3 space-y-2 text-sm text-text-muted">
-        {rest.join("\n\n").split("\n").filter(Boolean).map((line, i) => <p key={i}>{line}</p>)}
+        {rest
+          .join("\n\n")
+          .split("\n")
+          .filter(Boolean)
+          .map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
       </div>
     </div>
   );
