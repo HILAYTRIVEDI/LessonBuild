@@ -18,7 +18,9 @@ describe("evaluateNode", () => {
   it("marks an incorrect answer without penalty (retry allowed)", async () => {
     const out = await evaluateNode({ ...baseState, lastSelectedIndex: 0 } as never);
     expect(out.attempts![0]!.isCorrect).toBe(false);
-    expect(routeAfterEvaluate({ ...baseState, attempts: out.attempts } as never)).toBe("askQuestion");
+    expect(routeAfterEvaluate({ ...baseState, attempts: out.attempts } as never)).toBe(
+      "askQuestion",
+    );
   });
   it("routes to advance after a correct answer", async () => {
     const out = await evaluateNode({ ...baseState, lastSelectedIndex: 1 } as never);

@@ -20,7 +20,10 @@ export function buildGraph(checkpointer?: BaseCheckpointSaver) {
     .addEdge("approvePlan", "generateQuestions")
     .addEdge("generateQuestions", "askQuestion")
     .addEdge("askQuestion", "evaluate")
-    .addConditionalEdges("evaluate", routeAfterEvaluate, { advance: END, askQuestion: "askQuestion" });
+    .addConditionalEdges("evaluate", routeAfterEvaluate, {
+      advance: END,
+      askQuestion: "askQuestion",
+    });
   return workflow.compile(checkpointer ? { checkpointer } : undefined);
 }
 
