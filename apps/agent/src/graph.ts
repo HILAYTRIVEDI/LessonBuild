@@ -4,17 +4,20 @@ import { LessonState } from "./state.js";
 import { planNode } from "./nodes/plan.js";
 import { approvePlanNode } from "./nodes/approvePlan.js";
 import { generateQuestionsNode } from "./nodes/generateQuestions.js";
+import { askQuestionNode } from "./nodes/askQuestion.js";
 
-// Further nodes are added in later tasks; end after generateQuestions for now.
+// Further nodes are added in later tasks; end after askQuestion for now.
 export function buildGraph(checkpointer?: BaseCheckpointSaver) {
   const workflow = new StateGraph(LessonState)
     .addNode("plan", (state) => planNode(state))
     .addNode("approvePlan", approvePlanNode)
     .addNode("generateQuestions", (state) => generateQuestionsNode(state))
+    .addNode("askQuestion", askQuestionNode)
     .addEdge(START, "plan")
     .addEdge("plan", "approvePlan")
     .addEdge("approvePlan", "generateQuestions")
-    .addEdge("generateQuestions", END);
+    .addEdge("generateQuestions", "askQuestion")
+    .addEdge("askQuestion", END);
   return workflow.compile(checkpointer ? { checkpointer } : undefined);
 }
 
