@@ -5,6 +5,7 @@ import {
   useLangGraphInterrupt,
   useCopilotReadable,
   useCopilotAdditionalInstructions,
+  useCoAgent,
 } from "@copilotkit/react-core";
 import type {
   ApprovePlanEvent,
@@ -14,12 +15,21 @@ import type {
 } from "@lessonbuild/shared";
 import { PlanApprovalCard } from "@/components/PlanApprovalCard";
 import { McqWidget } from "@/components/McqWidget";
+import { ProgressReport } from "@/components/ProgressReport";
 import { HINT_GUARDRAIL_INSTRUCTIONS, toGuardrailReadable } from "@/lib/guardrail";
+
+type LessonAgentState = {
+  report: string | null;
+};
 
 export default function Home() {
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [activeQuestion, setActiveQuestion] = useState<AskQuestionEvent | null>(null);
+  const { state: agentState } = useCoAgent<LessonAgentState>({
+    name: "lesson",
+    initialState: { report: null },
+  });
 
   useCopilotAdditionalInstructions({ instructions: HINT_GUARDRAIL_INSTRUCTIONS });
 
@@ -83,6 +93,11 @@ export default function Home() {
         <input type="file" accept="application/pdf" className="hidden" onChange={onUpload} />
         {busy ? "Processing…" : lessonId ? `Lesson ready: ${lessonId}` : "Click to choose a PDF"}
       </label>
+      {agentState.report ? (
+        <div className="mt-8">
+          <ProgressReport report={agentState.report} />
+        </div>
+      ) : null}
       <CopilotSidebar
         defaultOpen
         labels={{ title: "Lesson Coach", initial: "Upload a PDF, then say 'start'." }}
