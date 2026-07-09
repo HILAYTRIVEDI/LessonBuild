@@ -1,5 +1,5 @@
 import type { Objective, Mcq } from "@lessonbuild/shared";
-import { query } from "./client.js";
+import { query } from "./client";
 
 export async function createLesson(input: {
   title: string;
