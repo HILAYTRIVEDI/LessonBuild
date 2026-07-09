@@ -14,7 +14,9 @@ describe("askQuestionNode", () => {
 
     await graph.invoke(
       {
-        questions: [{ stem: "Q1", choices: ["a", "b"], correctIndex: 0, explanation: "e", hint: "h" }],
+        questions: [
+          { stem: "Q1", choices: ["a", "b"], correctIndex: 0, explanation: "e", hint: "h" },
+        ],
         currentQuestionIdx: 0,
       },
       config,
