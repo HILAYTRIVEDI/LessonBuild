@@ -7,6 +7,21 @@ declare module "@langchain/langgraph-api/dist/preload.mjs" {
   // Side-effect only: registers the module load hooks. No exports.
 }
 
+declare module "@langchain/langgraph-api/dist/graph/load.mjs" {
+  export interface GraphSpec {
+    sourceFile: string;
+    exportSymbol: string | undefined;
+  }
+
+  export const GRAPH_SPEC: Record<string, GraphSpec | undefined>;
+}
+
+declare module "@langchain/langgraph-api/dist/graph/load.utils.mjs" {
+  import type { GraphSpec } from "@langchain/langgraph-api/dist/graph/load.mjs";
+
+  export function runGraphSchemaWorker(spec: GraphSpec): Promise<unknown>;
+}
+
 declare module "@langchain/langgraph-api/dist/server.mjs" {
   export interface StartServerOptions {
     port: number;

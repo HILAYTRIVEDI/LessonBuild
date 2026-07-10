@@ -25,6 +25,59 @@ function hasSelectedLesson(state: Record<string, unknown>): boolean {
   return typeof state["lessonId"] === "string" && state["lessonId"].trim().length > 0;
 }
 
+function withTopLevelLessonId(
+  value: Record<string, unknown>,
+  lessonId: string,
+): Record<string, unknown> {
+  if (hasSelectedLesson(value)) return value;
+  return {
+    ...value,
+    lessonId,
+  };
+}
+
+function withLessonState(value: Record<string, unknown>, lessonId: string): Record<string, unknown> {
+  const withTopLevel = withTopLevelLessonId(value, lessonId);
+  const state = isRecord(withTopLevel["state"]) ? withTopLevel["state"] : {};
+  if (hasSelectedLesson(state)) return withTopLevel;
+  return {
+    ...withTopLevel,
+    state: {
+      ...state,
+      lessonId,
+    },
+  };
+}
+
+function withGraphqlLessonState(value: Record<string, unknown>, lessonId: string): Record<string, unknown> {
+  let nextValue = value;
+  const data = value["data"];
+  if (isRecord(data)) {
+    nextValue = {
+      ...nextValue,
+      data: withLessonState(data, lessonId),
+    };
+  }
+  const input = value["input"];
+  if (isRecord(input)) {
+    nextValue = {
+      ...nextValue,
+      input: withLessonState(input, lessonId),
+    };
+  }
+  const state = isRecord(value["state"]) ? value["state"] : {};
+  if (!hasSelectedLesson(state)) {
+    nextValue = {
+      ...nextValue,
+      state: {
+        ...state,
+        lessonId,
+      },
+    };
+  }
+  return nextValue;
+}
+
 async function withSelectedLesson(req: NextRequest): Promise<Request> {
   // The cookie is attacker-controlled input — only forward it into agent
   // state when it looks like a lesson id we could have minted.
@@ -40,8 +93,26 @@ async function withSelectedLesson(req: NextRequest): Promise<Request> {
   }
   if (!isRecord(body)) return req;
 
-  const state = isRecord(body["state"]) ? body["state"] : {};
-  if (hasSelectedLesson(state)) return req;
+  let nextBody = withLessonState(body, lessonId);
+  const input = body["input"];
+  if (isRecord(input)) {
+    nextBody = {
+      ...nextBody,
+      input: withLessonState(input, lessonId),
+    };
+  }
+  const variables = body["variables"];
+  if (isRecord(variables)) {
+    nextBody = {
+      ...nextBody,
+      variables: withGraphqlLessonState(variables, lessonId),
+    };
+  }
+
+  // Some LangGraph clients merge agent state from top-level `input` and not the
+  // nested `state` object. Mirror the lesson id there as well so hydrate never
+  // misses it.
+  nextBody = withTopLevelLessonId(nextBody, lessonId);
 
   const headers = new Headers(req.headers);
   headers.delete("content-length");
@@ -49,13 +120,7 @@ async function withSelectedLesson(req: NextRequest): Promise<Request> {
   return new Request(req.url, {
     method: req.method,
     headers,
-    body: JSON.stringify({
-      ...body,
-      state: {
-        ...state,
-        lessonId,
-      },
-    }),
+    body: JSON.stringify(nextBody),
   });
 }
 
