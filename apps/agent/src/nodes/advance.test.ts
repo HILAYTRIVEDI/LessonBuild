@@ -15,9 +15,9 @@ describe("advance", () => {
       questions,
     } as unknown as LessonStateType);
     expect(out.currentQuestionIdx).toBe(1);
-    expect(
-      routeAfterAdvance({ ...out, questions } as unknown as LessonStateType),
-    ).toBe("askQuestion");
+    expect(routeAfterAdvance({ ...out, questions } as unknown as LessonStateType)).toBe(
+      "askQuestion",
+    );
   });
 
   it("keeps asking until the last question", async () => {
@@ -26,9 +26,9 @@ describe("advance", () => {
       questions,
     } as unknown as LessonStateType);
     expect(out.currentQuestionIdx).toBe(2);
-    expect(
-      routeAfterAdvance({ ...out, questions } as unknown as LessonStateType),
-    ).toBe("askQuestion");
+    expect(routeAfterAdvance({ ...out, questions } as unknown as LessonStateType)).toBe(
+      "askQuestion",
+    );
   });
 
   it("summarizes after the last question", async () => {
@@ -37,8 +37,8 @@ describe("advance", () => {
       questions,
     } as unknown as LessonStateType);
     expect(out.currentQuestionIdx).toBe(3);
-    expect(
-      routeAfterAdvance({ ...out, questions } as unknown as LessonStateType),
-    ).toBe("summarize");
+    expect(routeAfterAdvance({ ...out, questions } as unknown as LessonStateType)).toBe(
+      "summarize",
+    );
   });
 });

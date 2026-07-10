@@ -60,8 +60,8 @@ describe("lesson data access", () => {
   });
 
   it("throws for an unknown question id", async () => {
-    await expect(
-      getQuestionAnswer("00000000-0000-0000-0000-000000000000"),
-    ).rejects.toThrow(/not found/);
+    await expect(getQuestionAnswer("00000000-0000-0000-0000-000000000000")).rejects.toThrow(
+      /not found/,
+    );
   });
 });

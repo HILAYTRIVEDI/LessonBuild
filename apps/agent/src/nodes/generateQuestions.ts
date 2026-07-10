@@ -21,7 +21,10 @@ type BatchOutput = { objectives: { questions: Mcq[] }[] };
  * (e.g. `{ "questions": { "objectives": [...] } }`), which makes the strict
  * parser reject an otherwise valid output.
  */
-function coerceBatch(value: unknown, schema: ReturnType<typeof buildBatchSchema>): BatchOutput | null {
+function coerceBatch(
+  value: unknown,
+  schema: ReturnType<typeof buildBatchSchema>,
+): BatchOutput | null {
   const direct = schema.safeParse(value);
   if (direct.success) return direct.data;
   const bareArray = schema.shape.objectives.safeParse(value);
@@ -81,8 +84,7 @@ export async function generateQuestionsNode(
   let batch: BatchOutput | null = null;
   for (let attempt = 0; attempt < 2 && batch === null; attempt++) {
     const result = await structured.invoke(messages);
-    batch =
-      coerceBatch(result.parsed, schema) ?? coerceBatch(rawToolArgs(result.raw), schema);
+    batch = coerceBatch(result.parsed, schema) ?? coerceBatch(rawToolArgs(result.raw), schema);
   }
   if (batch === null) {
     throw new Error(

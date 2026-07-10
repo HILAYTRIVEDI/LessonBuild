@@ -227,7 +227,11 @@ export default function Home() {
         <>
           <label className="mt-8 block cursor-pointer rounded-md border border-dashed border-border bg-surface-muted p-10 text-center shadow-card">
             <input type="file" accept="application/pdf" className="hidden" onChange={onUpload} />
-            {busy ? "Processing…" : lessonId ? `Lesson ready: ${lessonId}` : "Click to choose a PDF"}
+            {busy
+              ? "Processing…"
+              : lessonId
+                ? `Lesson ready: ${lessonId}`
+                : "Click to choose a PDF"}
           </label>
           {uploadError ? (
             <p className="mt-3 text-sm font-medium text-error">{uploadError}</p>
