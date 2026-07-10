@@ -13,6 +13,7 @@ const mcqEvent: AskQuestionEvent = {
   stem: "What is 2 + 2?",
   choices: ["3", "4"],
   questionIdx: 0,
+  totalQuestions: 2,
 };
 
 const planInterrupt: PendingInterrupt = { kind: "plan", plan, respond: () => {} };

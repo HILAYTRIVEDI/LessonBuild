@@ -265,6 +265,8 @@ export default function Home() {
           <McqWidget
             stem={stage.interrupt.event.stem}
             choices={stage.interrupt.event.choices}
+            questionIdx={stage.interrupt.event.questionIdx}
+            totalQuestions={stage.interrupt.event.totalQuestions}
             {...(stage.interrupt.event.feedback
               ? { feedback: stage.interrupt.event.feedback }
               : {})}
