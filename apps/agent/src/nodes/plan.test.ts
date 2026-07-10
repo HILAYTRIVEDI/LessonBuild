@@ -53,7 +53,10 @@ describe("planNode", () => {
   });
 
   it("retries once and throws when the model never returns a valid plan", async () => {
-    const invoke = vi.fn(async () => ({ raw: { tool_calls: [{ args: { bad: true } }] }, parsed: null }));
+    const invoke = vi.fn(async () => ({
+      raw: { tool_calls: [{ args: { bad: true } }] },
+      parsed: null,
+    }));
     const broken = { withStructuredOutput: () => ({ invoke }) };
     await expect(
       planNode({ docText: "t", lessonId: "L1" } as never, broken as never),

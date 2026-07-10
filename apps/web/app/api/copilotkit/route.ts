@@ -36,7 +36,10 @@ function withTopLevelLessonId(
   };
 }
 
-function withLessonState(value: Record<string, unknown>, lessonId: string): Record<string, unknown> {
+function withLessonState(
+  value: Record<string, unknown>,
+  lessonId: string,
+): Record<string, unknown> {
   const withTopLevel = withTopLevelLessonId(value, lessonId);
   const state = isRecord(withTopLevel["state"]) ? withTopLevel["state"] : {};
   if (hasSelectedLesson(state)) return withTopLevel;
@@ -49,7 +52,10 @@ function withLessonState(value: Record<string, unknown>, lessonId: string): Reco
   };
 }
 
-function withGraphqlLessonState(value: Record<string, unknown>, lessonId: string): Record<string, unknown> {
+function withGraphqlLessonState(
+  value: Record<string, unknown>,
+  lessonId: string,
+): Record<string, unknown> {
   let nextValue = value;
   const data = value["data"];
   if (isRecord(data)) {

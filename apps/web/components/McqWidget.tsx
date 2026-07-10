@@ -1,15 +1,20 @@
 "use client";
 import { useState } from "react";
 import type { AskQuestionFeedback } from "@lessonbuild/shared";
+import { formatProgress } from "@/lib/progress";
 
 export function McqWidget({
   stem,
   choices,
+  questionIdx,
+  totalQuestions,
   feedback,
   onSubmit,
 }: {
   stem: string;
   choices: string[];
+  questionIdx: number;
+  totalQuestions: number;
   feedback?: AskQuestionFeedback;
   onSubmit: (selectedIndex: number) => void;
 }) {
@@ -30,7 +35,10 @@ export function McqWidget({
 
   return (
     <div className="rounded-md border border-border bg-surface p-6 shadow-card">
-      <p className="font-medium">{stem}</p>
+      <p className="text-sm font-medium text-text-muted">
+        {formatProgress(questionIdx, totalQuestions)}
+      </p>
+      <p className="mt-2 font-medium">{stem}</p>
       {feedback && (
         <p className={`mt-2 font-medium ${feedback.isCorrect ? "text-success" : "text-error"}`}>
           {feedback.isCorrect ? "Correct! " : "Not quite. "}

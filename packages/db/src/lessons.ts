@@ -82,3 +82,21 @@ export async function getAttempts(
     attemptNo: r.attempt_no,
   }));
 }
+
+/**
+ * Answer-key lookup for the agent's deterministic evaluate/feedback path.
+ * The key lives only in Postgres — never in graph state, which CopilotKit
+ * streams to the browser.
+ */
+export async function getQuestionAnswer(
+  questionId: string,
+): Promise<{ correctIndex: number; explanation: string }> {
+  const { rows } = await query<{ correct_index: number; explanation: string }>(
+    `SELECT correct_index, explanation FROM questions WHERE id = $1`,
+    [questionId],
+  );
+  if (rows.length === 0) {
+    throw new Error(`getQuestionAnswer: question "${questionId}" not found`);
+  }
+  return { correctIndex: rows[0]!.correct_index, explanation: rows[0]!.explanation };
+}

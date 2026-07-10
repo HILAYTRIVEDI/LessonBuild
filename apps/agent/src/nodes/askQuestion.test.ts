@@ -1,7 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { StateGraph, START, END, MemorySaver } from "@langchain/langgraph";
 import { LessonState } from "../state.js";
 import { askQuestionNode } from "./askQuestion";
+
+vi.mock("@lessonbuild/db", () => ({
+  getQuestionAnswer: vi.fn(async () => ({ correctIndex: 0, explanation: "db-explanation" })),
+}));
 
 function buildTestGraph() {
   const workflow = new StateGraph(LessonState)
@@ -11,19 +15,21 @@ function buildTestGraph() {
   return workflow.compile({ checkpointer: new MemorySaver() });
 }
 
+// Sanitized state shape: no correctIndex/explanation on state questions.
+// NOTE: at this task's boundary the state type still says Mcq[] (it becomes
+// SafeMcq[] only in the next task), so each graph.invoke input below is cast
+// `as never` to keep strict tsc green in the interim. The casts stay harmless
+// once the state type narrows.
+const q1 = { stem: "Q1", choices: ["a", "b"], hint: "h" };
+const q2 = { stem: "Q2", choices: ["c", "d"], hint: "h2" };
+
 describe("askQuestionNode", () => {
-  it("interrupts to ask the current question", async () => {
+  it("interrupts with the current question and total count", async () => {
     const graph = buildTestGraph();
     const config = { configurable: { thread_id: "test-thread" } };
 
     await graph.invoke(
-      {
-        questions: [
-          { stem: "Q1", choices: ["a", "b"], correctIndex: 0, explanation: "e", hint: "h" },
-        ],
-        questionIds: ["q-1"],
-        currentQuestionIdx: 0,
-      },
+      { questions: [q1, q2], questionIds: ["q-1", "q-2"], currentQuestionIdx: 0 } as never,
       config,
     );
 
@@ -33,26 +39,21 @@ describe("askQuestionNode", () => {
       stem: "Q1",
       choices: ["a", "b"],
       questionIdx: 0,
+      totalQuestions: 2,
     });
   });
 
-  it("does not attach feedback from a different question at the same index", async () => {
-    // Regression for the objective-transition deadlock: after objective 1's
-    // last question (idx 0 of a new batch), a correct attempt on the *old*
-    // question must not surface as feedback — the old code matched on
-    // questionIdx and served a fresh question in a locked, feedback state.
+  it("does not attach feedback from a different question", async () => {
     const graph = buildTestGraph();
     const config = { configurable: { thread_id: "test-thread-2" } };
 
     await graph.invoke(
       {
-        questions: [
-          { stem: "Q-obj2", choices: ["a", "b"], correctIndex: 0, explanation: "e", hint: "h" },
-        ],
-        questionIds: ["obj2-q1"],
+        questions: [q1],
+        questionIds: ["q-1"],
         currentQuestionIdx: 0,
-        attempts: [{ questionId: "obj1-q1", selectedIndex: 0, isCorrect: true, attemptNo: 1 }],
-      },
+        attempts: [{ questionId: "other-q", selectedIndex: 0, isCorrect: true, attemptNo: 1 }],
+      } as never,
       config,
     );
 
@@ -61,19 +62,17 @@ describe("askQuestionNode", () => {
     expect(value.feedback).toBeUndefined();
   });
 
-  it("attaches retry feedback without leaking the correct index", async () => {
+  it("attaches retry feedback from the state hint without leaking the correct index", async () => {
     const graph = buildTestGraph();
     const config = { configurable: { thread_id: "test-thread-3" } };
 
     await graph.invoke(
       {
-        questions: [
-          { stem: "Q1", choices: ["a", "b"], correctIndex: 0, explanation: "e", hint: "h" },
-        ],
+        questions: [q1],
         questionIds: ["q-1"],
         currentQuestionIdx: 0,
         attempts: [{ questionId: "q-1", selectedIndex: 1, isCorrect: false, attemptNo: 1 }],
-      },
+      } as never,
       config,
     );
 
@@ -81,5 +80,24 @@ describe("askQuestionNode", () => {
     const value = state.tasks[0]?.interrupts[0]?.value as { feedback?: Record<string, unknown> };
     expect(value.feedback).toMatchObject({ selectedIndex: 1, isCorrect: false, text: "h" });
     expect(value.feedback).not.toHaveProperty("correctIndex");
+  });
+
+  it("fetches the post-correct explanation from the DB (it is not in state)", async () => {
+    const graph = buildTestGraph();
+    const config = { configurable: { thread_id: "test-thread-4" } };
+
+    await graph.invoke(
+      {
+        questions: [q1],
+        questionIds: ["q-1"],
+        currentQuestionIdx: 0,
+        attempts: [{ questionId: "q-1", selectedIndex: 0, isCorrect: true, attemptNo: 1 }],
+      } as never,
+      config,
+    );
+
+    const state = await graph.getState(config);
+    const value = state.tasks[0]?.interrupts[0]?.value as { feedback?: Record<string, unknown> };
+    expect(value.feedback).toMatchObject({ isCorrect: true, text: "db-explanation" });
   });
 });

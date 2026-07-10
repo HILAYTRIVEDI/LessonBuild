@@ -7,9 +7,7 @@ import type { LessonStateType } from "../state.js";
  * so `plan` (and every downstream node) works over the real text rather than the
  * empty-string default. DB is the single source of truth for the document.
  */
-export async function hydrateNode(
-  state: LessonStateType,
-): Promise<Partial<LessonStateType>> {
+export async function hydrateNode(state: LessonStateType): Promise<Partial<LessonStateType>> {
   // Idempotent: if a prior turn already loaded the text, don't re-fetch.
   if (state.docText.length > 0) return {};
 

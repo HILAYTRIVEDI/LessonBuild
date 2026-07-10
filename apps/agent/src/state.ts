@@ -1,10 +1,10 @@
 import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import type { BaseMessage } from "@langchain/core/messages";
-import type { LessonPlan, Mcq } from "@lessonbuild/shared";
+import type { LessonPlan, SafeMcq } from "@lessonbuild/shared";
 
 export type AttemptRecord = {
-  // DB id of the question, unique across objectives. currentQuestionIdx resets
-  // to 0 per objective, so an index-keyed record would collide across batches.
+  // DB id of the question — a stable key independent of the learner's
+  // position, unlike currentQuestionIdx which moves as the quiz advances.
   questionId: string;
   selectedIndex: number;
   isCorrect: boolean;
@@ -18,8 +18,9 @@ export const LessonState = Annotation.Root({
   planApproved: Annotation<boolean>({ reducer: (_, n) => n, default: () => false }),
   planFeedback: Annotation<string | null>({ reducer: (_, n) => n, default: () => null }),
   objectiveIds: Annotation<string[]>({ reducer: (_, n) => n, default: () => [] }),
-  currentObjectiveIdx: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
-  questions: Annotation<Mcq[]>({ reducer: (_, n) => n, default: () => [] }),
+  // Sanitized on purpose: CopilotKit streams this state to the browser, so it
+  // must never contain correctIndex/explanation. Full rows live in Postgres.
+  questions: Annotation<SafeMcq[]>({ reducer: (_, n) => n, default: () => [] }),
   questionIds: Annotation<string[]>({ reducer: (_, n) => n, default: () => [] }),
   currentQuestionIdx: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
   attempts: Annotation<AttemptRecord[]>({

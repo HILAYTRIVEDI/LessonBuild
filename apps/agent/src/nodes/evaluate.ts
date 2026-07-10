@@ -1,12 +1,13 @@
-import { recordAttempt } from "@lessonbuild/db";
+import { recordAttempt, getQuestionAnswer } from "@lessonbuild/db";
 import type { LessonStateType, AttemptRecord } from "../state.js";
 
 export async function evaluateNode(state: LessonStateType): Promise<Partial<LessonStateType>> {
-  const idx = state.currentQuestionIdx;
-  const q = state.questions[idx]!;
-  const questionId = state.questionIds[idx]!;
+  const questionId = state.questionIds[state.currentQuestionIdx]!;
   const selectedIndex = state.lastSelectedIndex ?? -1;
-  const isCorrect = selectedIndex === q.correctIndex;
+  // The answer key lives only in Postgres — graph state is streamed to the
+  // browser by CopilotKit, so it never holds correctIndex.
+  const { correctIndex } = await getQuestionAnswer(questionId);
+  const isCorrect = selectedIndex === correctIndex;
   const priorForThisQ = state.attempts.filter((a) => a.questionId === questionId).length;
   const attemptNo = priorForThisQ + 1;
 
