@@ -20,7 +20,7 @@ import { HINT_GUARDRAIL_INSTRUCTIONS, toGuardrailReadable } from "@/lib/guardrai
 import { loadLessonId, saveLessonId, clearSession } from "@/lib/session";
 
 type LessonAgentState = {
-  lessonId: string;
+  lessonId: string | null;
   report: string | null;
 };
 
@@ -56,7 +56,7 @@ export default function Home() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const { state: agentState, setState: setAgentState } = useCoAgent<LessonAgentState>({
     name: "lesson",
-    initialState: { lessonId: "", report: null },
+    initialState: { lessonId: null, report: null },
   });
 
   useCopilotAdditionalInstructions({ instructions: HINT_GUARDRAIL_INSTRUCTIONS });
@@ -112,8 +112,8 @@ export default function Home() {
         const id = (json as { lessonId: string }).lessonId;
         setLessonId(id);
         saveLessonId(id);
-        // The agent's plan node reads the document from the DB by lessonId, so this
-        // is the only piece of state the frontend must hand to the graph.
+        // Thread the lessonId into the agent's state so the graph's hydrate node
+        // can load the uploaded document from Postgres on the next run.
         setAgentState((prev) => ({ lessonId: id, report: prev?.report ?? null }));
       } else {
         setUploadError("Upload succeeded but the server response was malformed.");

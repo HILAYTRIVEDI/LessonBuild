@@ -1,7 +1,9 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/server.ts"],
+  // server.ts boots the API; graph.js is resolved at runtime by the langgraph
+  // server (graphs: { lesson: "./graph.js:graph" }), so it needs its own entry.
+  entry: ["src/server.ts", "src/graph.ts"],
   format: ["esm"],
   target: "node22",
   outDir: "dist",

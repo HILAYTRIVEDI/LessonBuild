@@ -48,5 +48,5 @@ RUN touch apps/agent/.env && chown agent:nodejs apps/agent/.env
 USER agent
 EXPOSE 2024
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-  CMD wget -qO- http://0.0.0.0:2024/info || exit 1
-CMD ["sh", "-c", "node apps/agent/dist/server.js && cd apps/agent && ./node_modules/.bin/langgraphjs dev --host 0.0.0.0 --port 2024 --no-browser"]
+  CMD wget -qO- http://localhost:2024/info || exit 1
+CMD ["node", "apps/agent/dist/server.js"]
