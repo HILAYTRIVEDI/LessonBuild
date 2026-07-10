@@ -28,6 +28,7 @@ export const LessonState = Annotation.Root({
     default: () => [],
   }),
   lastSelectedIndex: Annotation<number | null>({ reducer: (_, n) => n, default: () => null }),
+  readyToAdvance: Annotation<boolean>({ reducer: (_, n) => n, default: () => false }),
   report: Annotation<string | null>({ reducer: (_, n) => n, default: () => null }),
   messages: Annotation<BaseMessage[]>({ reducer: messagesStateReducer, default: () => [] }),
 });

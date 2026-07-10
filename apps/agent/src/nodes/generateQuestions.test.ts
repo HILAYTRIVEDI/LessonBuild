@@ -1,12 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { saveQuestion } from "@lessonbuild/db";
+import { retrieveLessonContext, saveQuestion } from "@lessonbuild/db";
 import { generateQuestionsNode } from "./generateQuestions";
 
 vi.mock("@lessonbuild/db", () => ({
+  retrieveLessonContext: vi.fn(async () => "retrieved context"),
   saveQuestion: vi.fn(async (objectiveId: string) => `q-${objectiveId}`),
 }));
 
 beforeEach(() => {
+  vi.mocked(retrieveLessonContext).mockClear();
+  vi.mocked(retrieveLessonContext).mockResolvedValue("retrieved context");
   vi.mocked(saveQuestion).mockClear();
 });
 
@@ -48,6 +51,38 @@ describe("generateQuestionsNode", () => {
     expect(vi.mocked(saveQuestion)).toHaveBeenCalledTimes(4);
     expect(vi.mocked(saveQuestion)).toHaveBeenNthCalledWith(1, "obj-1", qA);
     expect(vi.mocked(saveQuestion)).toHaveBeenNthCalledWith(3, "obj-2", qB);
+  });
+
+  it("retrieves document context for each objective", async () => {
+    const invoke = vi.fn(async () => ({ parsed: validBatch, raw: {} }));
+    const model = { withStructuredOutput: () => ({ invoke }) };
+    await generateQuestionsNode(baseState as never, model as never);
+
+    expect(vi.mocked(retrieveLessonContext)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(retrieveLessonContext)).toHaveBeenNthCalledWith(1, {
+      lessonId: "L1",
+      queryText: "A dA",
+    });
+    expect(invoke).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          content: expect.stringContaining("Retrieved document context:\nObjective 1: A"),
+        }),
+      ]),
+    );
+  });
+
+  it("falls back to state docText when no chunks are available", async () => {
+    vi.mocked(retrieveLessonContext).mockResolvedValue("");
+    const invoke = vi.fn(async () => ({ parsed: validBatch, raw: {} }));
+    const model = { withStructuredOutput: () => ({ invoke }) };
+    await generateQuestionsNode(baseState as never, model as never);
+
+    expect(invoke).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ content: expect.stringContaining("Objective 1: A\nt") }),
+      ]),
+    );
   });
 
   it("returns sanitized questions — no correctIndex or explanation in state", async () => {

@@ -5,7 +5,7 @@ import { hydrateNode } from "./nodes/hydrate.js";
 import { planNode } from "./nodes/plan.js";
 import { approvePlanNode, routeAfterApprove } from "./nodes/approvePlan.js";
 import { generateQuestionsNode } from "./nodes/generateQuestions.js";
-import { askQuestionNode } from "./nodes/askQuestion.js";
+import { askQuestionNode, routeAfterAskQuestion } from "./nodes/askQuestion.js";
 import { evaluateNode, routeAfterEvaluate } from "./nodes/evaluate.js";
 import { advanceNode, routeAfterAdvance } from "./nodes/advance.js";
 import { summarizeNode } from "./nodes/summarize.js";
@@ -28,9 +28,11 @@ export function buildGraph(checkpointer?: BaseCheckpointSaver) {
       generateQuestions: "generateQuestions",
     })
     .addEdge("generateQuestions", "askQuestion")
-    .addEdge("askQuestion", "evaluate")
-    .addConditionalEdges("evaluate", routeAfterEvaluate, {
+    .addConditionalEdges("askQuestion", routeAfterAskQuestion, {
       advance: "advance",
+      evaluate: "evaluate",
+    })
+    .addConditionalEdges("evaluate", routeAfterEvaluate, {
       askQuestion: "askQuestion",
     })
     // Generation runs exactly once, right after plan approval — advance only

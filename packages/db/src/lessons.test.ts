@@ -4,12 +4,14 @@ import { runMigrations } from "./migrate";
 import { pool } from "./client";
 import {
   createLesson,
+  getLessonChunks,
   getLesson,
   saveObjectives,
   saveQuestion,
   recordAttempt,
   getAttempts,
   getQuestionAnswer,
+  retrieveLessonContext,
 } from "./lessons";
 
 beforeAll(async () => {
@@ -41,6 +43,44 @@ describe("lesson data access", () => {
     const attempts = await getAttempts(lessonId);
     expect(attempts).toHaveLength(2);
     expect(attempts.filter((a) => a.isCorrect)).toHaveLength(1);
+  });
+
+  it("stores lesson chunks and retrieves relevant context", async () => {
+    const lessonId = await createLesson({
+      title: "Chunked",
+      sourceFilename: "chunked.pdf",
+      docText: "photosynthesis text respiration text",
+      chunks: [
+        { ord: 0, content: "Photosynthesis uses light to make glucose." },
+        { ord: 1, content: "Cellular respiration releases stored energy." },
+      ],
+    });
+
+    const chunks = await getLessonChunks(lessonId);
+    expect(chunks).toEqual([
+      { ord: 0, content: "Photosynthesis uses light to make glucose." },
+      { ord: 1, content: "Cellular respiration releases stored energy." },
+    ]);
+
+    await expect(
+      retrieveLessonContext({ lessonId, queryText: "stored energy", limit: 1 }),
+    ).resolves.toBe("Cellular respiration releases stored energy.");
+  });
+
+  it("falls back to leading chunks when retrieval has no lexical match", async () => {
+    const lessonId = await createLesson({
+      title: "Fallback",
+      sourceFilename: "fallback.pdf",
+      docText: "alpha beta",
+      chunks: [
+        { ord: 0, content: "Alpha opening context." },
+        { ord: 1, content: "Beta later context." },
+      ],
+    });
+
+    await expect(
+      retrieveLessonContext({ lessonId, queryText: "zzzzzz", limit: 1 }),
+    ).resolves.toBe("Alpha opening context.");
   });
 
   it("returns the answer key for a saved question by id", async () => {

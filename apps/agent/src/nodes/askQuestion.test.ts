@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { StateGraph, START, END, MemorySaver } from "@langchain/langgraph";
 import { LessonState } from "../state.js";
-import { askQuestionNode } from "./askQuestion";
+import { askQuestionNode, routeAfterAskQuestion } from "./askQuestion";
 
 vi.mock("@lessonbuild/db", () => ({
   getQuestionAnswer: vi.fn(async () => ({ correctIndex: 0, explanation: "db-explanation" })),
@@ -16,10 +16,6 @@ function buildTestGraph() {
 }
 
 // Sanitized state shape: no correctIndex/explanation on state questions.
-// NOTE: at this task's boundary the state type still says Mcq[] (it becomes
-// SafeMcq[] only in the next task), so each graph.invoke input below is cast
-// `as never` to keep strict tsc green in the interim. The casts stay harmless
-// once the state type narrows.
 const q1 = { stem: "Q1", choices: ["a", "b"], hint: "h" };
 const q2 = { stem: "Q2", choices: ["c", "d"], hint: "h2" };
 
@@ -99,5 +95,10 @@ describe("askQuestionNode", () => {
     const state = await graph.getState(config);
     const value = state.tasks[0]?.interrupts[0]?.value as { feedback?: Record<string, unknown> };
     expect(value.feedback).toMatchObject({ isCorrect: true, text: "db-explanation" });
+  });
+
+  it("routes to advance only after the learner continues from correct feedback", () => {
+    expect(routeAfterAskQuestion({ readyToAdvance: true } as never)).toBe("advance");
+    expect(routeAfterAskQuestion({ readyToAdvance: false } as never)).toBe("evaluate");
   });
 });

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McqSchema, type Mcq, type SafeMcq } from "@lessonbuild/shared";
-import { saveQuestion } from "@lessonbuild/db";
+import { retrieveLessonContext, saveQuestion } from "@lessonbuild/db";
 import { getModel } from "../model.js";
 import type { LessonStateType } from "../state.js";
 
@@ -73,11 +73,27 @@ export async function generateQuestionsNode(
   const objectiveList = objectives
     .map((o, i) => `${i + 1}. ${o.title} — ${o.description}`)
     .join("\n");
+  const retrievedContexts = await Promise.all(
+    objectives.map((objective) =>
+      retrieveLessonContext({
+        lessonId: state.lessonId,
+        queryText: `${objective.title} ${objective.description}`,
+      }),
+    ),
+  );
+  const retrievedContext = retrievedContexts
+    .map((context, index) => {
+      const objective = objectives[index]!;
+      return context
+        ? `Objective ${index + 1}: ${objective.title}\n${context}`
+        : `Objective ${index + 1}: ${objective.title}\n${state.docText}`;
+    })
+    .join("\n\n");
   const messages: { role: "system" | "user"; content: string }[] = [
     { role: "system", content: SYSTEM },
     {
       role: "user",
-      content: `Objectives:\n${objectiveList}\n\nDocument:\n${state.docText}`,
+      content: `Objectives:\n${objectiveList}\n\nRetrieved document context:\n${retrievedContext}`,
     },
   ];
 

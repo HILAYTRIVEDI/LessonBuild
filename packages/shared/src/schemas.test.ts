@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { LessonPlanSchema, McqSchema, SafeMcqSchema, AskQuestionEventSchema } from "./schemas";
+import {
+  LessonPlanSchema,
+  McqSchema,
+  SafeMcqSchema,
+  AskQuestionEventSchema,
+  AskQuestionResponseSchema,
+} from "./schemas";
 
 describe("LessonPlanSchema", () => {
   it("accepts a valid plan", () => {
@@ -63,5 +69,20 @@ describe("AskQuestionEventSchema", () => {
   it("accepts an event with totalQuestions", () => {
     const event = { ...base, totalQuestions: 6 };
     expect(AskQuestionEventSchema.parse(event)).toEqual(event);
+  });
+});
+
+describe("AskQuestionResponseSchema", () => {
+  it("accepts an answer submission", () => {
+    expect(AskQuestionResponseSchema.parse({ action: "submit", selectedIndex: 1 })).toEqual({
+      action: "submit",
+      selectedIndex: 1,
+    });
+  });
+
+  it("accepts continuing after correct-answer feedback", () => {
+    expect(AskQuestionResponseSchema.parse({ action: "continue" })).toEqual({
+      action: "continue",
+    });
   });
 });

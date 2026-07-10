@@ -10,6 +10,7 @@ export function McqWidget({
   totalQuestions,
   feedback,
   onSubmit,
+  onContinue,
 }: {
   stem: string;
   choices: string[];
@@ -17,9 +18,11 @@ export function McqWidget({
   totalQuestions: number;
   feedback?: AskQuestionFeedback;
   onSubmit: (selectedIndex: number) => void;
+  onContinue: () => void;
 }) {
   const [selected, setSelected] = useState<number | null>(null);
   const hasRetry = !!feedback && !feedback.isCorrect;
+  const canContinue = !!feedback?.isCorrect;
 
   function handleSubmit() {
     if (selected === null) return;
@@ -55,7 +58,7 @@ export function McqWidget({
               type="radio"
               name="mcq"
               disabled={!!feedback && !hasRetry}
-              checked={selected === i}
+              checked={selected === i || (!!feedback && i === feedback.selectedIndex)}
               onChange={() => setSelected(i)}
             />
             <span>{c}</span>
@@ -69,6 +72,14 @@ export function McqWidget({
           onClick={handleSubmit}
         >
           {hasRetry ? "Try again" : "Submit"}
+        </button>
+      )}
+      {canContinue && (
+        <button
+          className="mt-4 rounded-md bg-primary px-4 py-2 font-medium text-white"
+          onClick={onContinue}
+        >
+          Continue
         </button>
       )}
     </div>
