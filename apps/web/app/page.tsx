@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CopilotSidebar } from "@copilotkit/react-ui";
 import {
   useLangGraphInterrupt,
@@ -13,48 +13,55 @@ import type {
   AskQuestionEvent,
   AskQuestionResponse,
 } from "@lessonbuild/shared";
+import type { z } from "zod";
 import { PlanApprovalCard } from "@/components/PlanApprovalCard";
 import { McqWidget } from "@/components/McqWidget";
 import { ProgressReport } from "@/components/ProgressReport";
 import { HINT_GUARDRAIL_INSTRUCTIONS, toGuardrailReadable } from "@/lib/guardrail";
 import { loadLessonId, saveLessonId, clearSession } from "@/lib/session";
+import { deriveStage } from "@/lib/stage";
+import type { PendingInterrupt } from "@/lib/stage";
 
 type LessonAgentState = {
   lessonId: string | null;
   report: string | null;
 };
 
-// Wraps McqWidget so publishing the active question happens in an effect —
-// the interrupt render callback runs during render, where calling a parent
-// setState directly is illegal.
-function McqInterrupt({
+type LessonInterruptEvent = z.infer<typeof LessonInterruptEventSchema>;
+
+// Rendered into the chat's interrupt slot instead of a visible card: the
+// lesson flow lives on the dashboard, so this publishes the interrupt to the
+// page in an effect (the interrupt render callback runs during render, where
+// calling a parent setState directly is illegal) and shows nothing in chat.
+function InterruptPublisher({
   value,
-  onActive,
-  onSubmit,
+  resolve,
+  onInterrupt,
 }: {
-  value: AskQuestionEvent;
-  onActive: (q: AskQuestionEvent) => void;
-  onSubmit: (selectedIndex: number) => void;
+  value: LessonInterruptEvent;
+  resolve: (response: unknown) => void;
+  onInterrupt: (value: LessonInterruptEvent, resolve: (response: unknown) => void) => void;
 }) {
   useEffect(() => {
-    onActive(value);
-  }, [value, onActive]);
-  return (
-    <McqWidget
-      stem={value.stem}
-      choices={value.choices}
-      {...(value.feedback ? { feedback: value.feedback } : {})}
-      onSubmit={onSubmit}
-    />
-  );
+    onInterrupt(value, resolve);
+  }, [value, resolve, onInterrupt]);
+  return null;
 }
 
 export default function Home() {
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [pending, setPending] = useState<PendingInterrupt | null>(null);
   const [activeQuestion, setActiveQuestion] = useState<AskQuestionEvent | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const { state: agentState, setState: setAgentState } = useCoAgent<LessonAgentState>({
+  const [runError, setRunError] = useState<string | null>(null);
+  const {
+    state: agentState,
+    setState: setAgentState,
+    run,
+    running,
+  } = useCoAgent<LessonAgentState>({
     name: "lesson",
     initialState: { lessonId: null, report: null },
   });
@@ -125,6 +132,54 @@ export default function Home() {
     }
   }
 
+  function onStart() {
+    setRunError(null);
+    setStarting(true);
+    void run()
+      .catch(() => {
+        setRunError("The lesson could not start — please try again.");
+      })
+      .finally(() => setStarting(false));
+  }
+
+  // Turns a chat-slot interrupt into dashboard state. Identity of the parsed
+  // event changes on every chat render, so republishing is guarded by
+  // comparing payloads — otherwise the effect->setState->render cycle loops.
+  const onInterrupt = useCallback(
+    (value: LessonInterruptEvent, resolve: (response: unknown) => void) => {
+      if (value.type === "ask_mcq") setActiveQuestion(value);
+      setPending((prev) => {
+        if (value.type === "approve_plan") {
+          if (!value.plan) return prev;
+          if (prev?.kind === "plan" && JSON.stringify(prev.plan) === JSON.stringify(value.plan)) {
+            return prev;
+          }
+          const plan = value.plan;
+          return {
+            kind: "plan",
+            plan,
+            respond: (r: ApprovePlanResponse) => {
+              resolve(r);
+              setPending(null);
+            },
+          };
+        }
+        if (prev?.kind === "mcq" && JSON.stringify(prev.event) === JSON.stringify(value)) {
+          return prev;
+        }
+        return {
+          kind: "mcq",
+          event: value,
+          respond: (r: AskQuestionResponse) => {
+            resolve(r);
+            setPending(null);
+          },
+        };
+      });
+    },
+    [],
+  );
+
   // A single hook must render every interrupt type: CopilotKit publishes the
   // rendered element into one global slot, so a second useLangGraphInterrupt
   // whose render returns "" would blank out the first one's card. The explicit
@@ -137,45 +192,86 @@ export default function Home() {
       // trusting the discriminator, and render nothing on unknown shapes.
       const parsed = LessonInterruptEventSchema.safeParse(event.value);
       if (!parsed.success) return "";
-      const value = parsed.data;
-      switch (value.type) {
-        case "approve_plan": {
-          if (!value.plan) return "";
-          // CopilotKit types `resolve` as (resolution: string) => void, but for
-          // this legacy `interrupt()`-based flow the payload is forwarded
-          // untouched as the LangGraph `Command({ resume })` value, so we pass
-          // the structured response.
-          const respond = resolve as unknown as (response: ApprovePlanResponse) => void;
-          return <PlanApprovalCard plan={value.plan} onRespond={respond} />;
-        }
-        case "ask_mcq": {
-          // Same untyped-resolve situation as the approve_plan interrupt above.
-          const respond = resolve as unknown as (response: AskQuestionResponse) => void;
-          return (
-            <McqInterrupt
-              value={value}
-              onActive={setActiveQuestion}
-              onSubmit={(selectedIndex) => respond({ selectedIndex })}
-            />
-          );
-        }
-        default: {
-          const unhandled: never = value;
-          return `Unsupported interrupt: ${JSON.stringify(unhandled)}`;
-        }
-      }
+      // CopilotKit types resolve as (resolution: string) => void, but LangGraph
+      // resume payloads are objects at runtime — same cast the chat cards used.
+      return (
+        <InterruptPublisher
+          value={parsed.data}
+          resolve={resolve as unknown as (response: unknown) => void}
+          onInterrupt={onInterrupt}
+        />
+      );
     },
   });
 
+  const stage = deriveStage({
+    lessonId,
+    working: running || starting,
+    pending,
+    report: agentState.report ?? null,
+  });
+
   return (
-    <main className="mx-auto max-w-2xl p-12">
+    <main className="mx-auto max-w-3xl p-8 lg:p-12">
       <h1 className="text-4xl font-bold">LessonBuild</h1>
       <p className="mt-2 text-text-muted">Upload a PDF to build an interactive lesson.</p>
-      <label className="mt-8 block cursor-pointer rounded-md border border-dashed border-border bg-surface-muted p-10 text-center shadow-card">
-        <input type="file" accept="application/pdf" className="hidden" onChange={onUpload} />
-        {busy ? "Processing…" : lessonId ? `Lesson ready: ${lessonId}` : "Click to choose a PDF"}
-      </label>
-      {uploadError ? <p className="mt-3 text-sm font-medium text-error">{uploadError}</p> : null}
+
+      {(stage.kind === "upload" || stage.kind === "ready") && (
+        <>
+          <label className="mt-8 block cursor-pointer rounded-md border border-dashed border-border bg-surface-muted p-10 text-center shadow-card">
+            <input type="file" accept="application/pdf" className="hidden" onChange={onUpload} />
+            {busy ? "Processing…" : lessonId ? `Lesson ready: ${lessonId}` : "Click to choose a PDF"}
+          </label>
+          {uploadError ? (
+            <p className="mt-3 text-sm font-medium text-error">{uploadError}</p>
+          ) : null}
+          {stage.kind === "ready" && !busy ? (
+            <button
+              type="button"
+              className="mt-6 w-full rounded-md bg-primary px-6 py-3 text-lg font-semibold text-white shadow-card"
+              onClick={onStart}
+            >
+              Start lesson
+            </button>
+          ) : null}
+          {runError ? <p className="mt-3 text-sm font-medium text-error">{runError}</p> : null}
+        </>
+      )}
+
+      {stage.kind === "working" && (
+        <div className="mt-8 rounded-md border border-border bg-surface p-10 text-center shadow-card">
+          <p className="font-medium">Working on your lesson…</p>
+          <p className="mt-1 text-sm text-text-muted">
+            This can take a moment. Ask the Lesson Coach if you have questions.
+          </p>
+        </div>
+      )}
+
+      {stage.kind === "plan" && (
+        <div className="mt-8">
+          <PlanApprovalCard plan={stage.interrupt.plan} onRespond={stage.interrupt.respond} />
+        </div>
+      )}
+
+      {stage.kind === "question" && (
+        <div className="mt-8">
+          <McqWidget
+            stem={stage.interrupt.event.stem}
+            choices={stage.interrupt.event.choices}
+            {...(stage.interrupt.event.feedback
+              ? { feedback: stage.interrupt.event.feedback }
+              : {})}
+            onSubmit={(selectedIndex) => stage.interrupt.respond({ selectedIndex })}
+          />
+        </div>
+      )}
+
+      {stage.kind === "report" && (
+        <div className="mt-8">
+          <ProgressReport report={stage.report} />
+        </div>
+      )}
+
       {lessonId ? (
         <button
           type="button"
@@ -188,14 +284,13 @@ export default function Home() {
           Start a new lesson
         </button>
       ) : null}
-      {agentState.report ? (
-        <div className="mt-8">
-          <ProgressReport report={agentState.report} />
-        </div>
-      ) : null}
+
       <CopilotSidebar
-        defaultOpen
-        labels={{ title: "Lesson Coach", initial: "Upload a PDF, then say 'start'." }}
+        labels={{
+          title: "Lesson Coach",
+          initial:
+            "I'm here for hints and support. Upload a PDF and hit Start lesson on the dashboard to begin.",
+        }}
       />
     </main>
   );
