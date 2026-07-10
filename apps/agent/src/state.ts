@@ -1,6 +1,6 @@
 import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import type { BaseMessage } from "@langchain/core/messages";
-import type { LessonPlan, Mcq } from "@lessonbuild/shared";
+import type { LessonPlan, SafeMcq } from "@lessonbuild/shared";
 
 export type AttemptRecord = {
   // DB id of the question, unique across objectives. currentQuestionIdx resets
@@ -19,7 +19,9 @@ export const LessonState = Annotation.Root({
   planFeedback: Annotation<string | null>({ reducer: (_, n) => n, default: () => null }),
   objectiveIds: Annotation<string[]>({ reducer: (_, n) => n, default: () => [] }),
   currentObjectiveIdx: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
-  questions: Annotation<Mcq[]>({ reducer: (_, n) => n, default: () => [] }),
+  // Sanitized on purpose: CopilotKit streams this state to the browser, so it
+  // must never contain correctIndex/explanation. Full rows live in Postgres.
+  questions: Annotation<SafeMcq[]>({ reducer: (_, n) => n, default: () => [] }),
   questionIds: Annotation<string[]>({ reducer: (_, n) => n, default: () => [] }),
   currentQuestionIdx: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
   attempts: Annotation<AttemptRecord[]>({

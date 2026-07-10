@@ -1,27 +1,37 @@
 import { z } from "zod";
-import { McqSchema, type Mcq } from "@lessonbuild/shared";
+import { McqSchema, type Mcq, type SafeMcq } from "@lessonbuild/shared";
 import { saveQuestion } from "@lessonbuild/db";
 import { getModel } from "../model.js";
 import type { LessonStateType } from "../state.js";
 
-const BatchSchema = z.object({ questions: z.array(McqSchema).length(2) });
+const ObjectiveBatchSchema = z.object({ questions: z.array(McqSchema).length(2) });
+
+/** The single-call output: one 2-question batch per plan objective, in order. */
+function buildBatchSchema(objectiveCount: number) {
+  return z.object({
+    objectives: z.array(ObjectiveBatchSchema).length(objectiveCount),
+  });
+}
+
+type BatchOutput = { objectives: { questions: Mcq[] }[] };
 
 /**
- * Accepts the batch either at the top level or nested one key deep — some models
- * wrap the tool arguments in an extra object (e.g. `{ "questions": { "questions": [...] } }`),
- * which makes the strict parser reject an otherwise valid pair of MCQs.
+ * Accepts the batch at the top level, as a bare objectives array, or nested
+ * one key deep — some models wrap the tool arguments in an extra object
+ * (e.g. `{ "questions": { "objectives": [...] } }`), which makes the strict
+ * parser reject an otherwise valid output.
  */
-function coerceQuestions(value: unknown): Mcq[] | null {
-  const direct = BatchSchema.safeParse(value);
-  if (direct.success) return direct.data.questions;
-  const bareArray = z.array(McqSchema).safeParse(value);
-  if (bareArray.success) return bareArray.data;
+function coerceBatch(value: unknown, schema: ReturnType<typeof buildBatchSchema>): BatchOutput | null {
+  const direct = schema.safeParse(value);
+  if (direct.success) return direct.data;
+  const bareArray = schema.shape.objectives.safeParse(value);
+  if (bareArray.success) return { objectives: bareArray.data };
   if (typeof value === "object" && value !== null) {
     for (const nested of Object.values(value)) {
-      const wrapped = BatchSchema.safeParse(nested);
-      if (wrapped.success) return wrapped.data.questions;
-      const array = z.array(McqSchema).safeParse(nested);
-      if (array.success) return array.data;
+      const wrapped = schema.safeParse(nested);
+      if (wrapped.success) return wrapped.data;
+      const array = schema.shape.objectives.safeParse(nested);
+      if (array.success) return { objectives: array.data };
     }
   }
   return null;
@@ -36,39 +46,58 @@ function rawToolArgs(raw: unknown): unknown {
   return (first as { args: unknown }).args;
 }
 
-const SYSTEM = `Write 2 multiple-choice questions (4 choices each) that test the given
-objective, based strictly on the document. Provide the correct index, a short explanation of
-why it is correct, and a conceptual hint that does NOT reveal the answer.`;
+/** State is streamed to the browser by CopilotKit — strip the answer key. */
+function toSafeMcq(q: Mcq): SafeMcq {
+  return { stem: q.stem, choices: q.choices, hint: q.hint };
+}
+
+const SYSTEM = `For EACH learning objective listed, write 2 multiple-choice questions
+(4 choices each) that test that objective, based strictly on the document. Return one
+entry per objective, in the same order as listed. For every question provide the correct
+index, a short explanation of why it is correct, and a conceptual hint that does NOT
+reveal the answer.`;
 
 export async function generateQuestionsNode(
   state: LessonStateType,
   model = getModel(),
 ): Promise<Partial<LessonStateType>> {
-  const objective = state.lessonPlan!.objectives[state.currentObjectiveIdx]!;
-  const objectiveId = state.objectiveIds[state.currentObjectiveIdx]!;
-  const structured = model.withStructuredOutput(BatchSchema, {
+  const objectives = state.lessonPlan!.objectives;
+  const schema = buildBatchSchema(objectives.length);
+  const structured = model.withStructuredOutput(schema, {
     name: "questions",
     includeRaw: true,
   });
+  const objectiveList = objectives
+    .map((o, i) => `${i + 1}. ${o.title} — ${o.description}`)
+    .join("\n");
   const messages: { role: "system" | "user"; content: string }[] = [
     { role: "system", content: SYSTEM },
     {
       role: "user",
-      content: `Objective: ${objective.title} — ${objective.description}\n\nDocument:\n${state.docText}`,
+      content: `Objectives:\n${objectiveList}\n\nDocument:\n${state.docText}`,
     },
   ];
 
-  let questions: Mcq[] | null = null;
-  for (let attempt = 0; attempt < 2 && questions === null; attempt++) {
+  let batch: BatchOutput | null = null;
+  for (let attempt = 0; attempt < 2 && batch === null; attempt++) {
     const result = await structured.invoke(messages);
-    questions =
-      coerceQuestions(result.parsed) ?? coerceQuestions(rawToolArgs(result.raw));
+    batch =
+      coerceBatch(result.parsed, schema) ?? coerceBatch(rawToolArgs(result.raw), schema);
   }
-  if (questions === null) {
-    throw new Error("The model did not return a valid pair of questions. Please try again.");
+  if (batch === null) {
+    throw new Error(
+      "The model did not return a valid set of questions for every objective. Please try again.",
+    );
   }
 
+  const questions: SafeMcq[] = [];
   const questionIds: string[] = [];
-  for (const q of questions) questionIds.push(await saveQuestion(objectiveId, q));
+  for (let i = 0; i < batch.objectives.length; i++) {
+    const objectiveId = state.objectiveIds[i]!;
+    for (const q of batch.objectives[i]!.questions) {
+      questionIds.push(await saveQuestion(objectiveId, q));
+      questions.push(toSafeMcq(q));
+    }
+  }
   return { questions, questionIds, currentQuestionIdx: 0 };
 }
