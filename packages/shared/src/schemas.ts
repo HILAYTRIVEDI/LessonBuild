@@ -26,6 +26,15 @@ export const McqSchema = z
     path: ["correctIndex"],
   });
 
+// Browser-visible question shape: CopilotKit streams the full graph state to
+// the client, so state (and anything derived from it) must never carry the
+// answer key. The hint is written to not reveal the answer, so it is safe.
+export const SafeMcqSchema = z.object({
+  stem: z.string().min(1),
+  choices: z.array(z.string().min(1)).min(2).max(6),
+  hint: z.string().min(1),
+});
+
 export const ApprovePlanEventSchema = z.object({
   type: z.literal("approve_plan"),
   plan: LessonPlanSchema.nullable(),
@@ -50,6 +59,7 @@ export const AskQuestionEventSchema = z.object({
   stem: z.string(),
   choices: z.array(z.string()),
   questionIdx: z.number().int().nonnegative(),
+  totalQuestions: z.number().int().positive(),
   feedback: AskQuestionFeedbackSchema.optional(),
 });
 
@@ -66,6 +76,7 @@ export type Difficulty = z.infer<typeof DifficultySchema>;
 export type Objective = z.infer<typeof ObjectiveSchema>;
 export type LessonPlan = z.infer<typeof LessonPlanSchema>;
 export type Mcq = z.infer<typeof McqSchema>;
+export type SafeMcq = z.infer<typeof SafeMcqSchema>;
 export type ApprovePlanEvent = z.infer<typeof ApprovePlanEventSchema>;
 export type ApprovePlanResponse = z.infer<typeof ApprovePlanResponseSchema>;
 export type AskQuestionFeedback = z.infer<typeof AskQuestionFeedbackSchema>;
