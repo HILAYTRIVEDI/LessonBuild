@@ -27,24 +27,26 @@ export const McqSchema = z
   });
 
 export const ApprovePlanEventSchema = z.object({
-  type: z.string(),
+  type: z.literal("approve_plan"),
   plan: LessonPlanSchema.nullable(),
 });
 
 export const ApprovePlanResponseSchema = z.object({
   approved: z.boolean(),
-  plan: LessonPlanSchema.optional(),
+  // Learner's change request when approved is false; fed back into the planner.
+  feedback: z.string().optional(),
 });
 
+// Deliberately excludes correctIndex: this payload reaches the browser while
+// the question is still answerable, so it must never carry the answer key.
 export const AskQuestionFeedbackSchema = z.object({
-  correctIndex: z.number().int().nonnegative(),
   selectedIndex: z.number().int().nonnegative(),
   isCorrect: z.boolean(),
   text: z.string(),
 });
 
 export const AskQuestionEventSchema = z.object({
-  type: z.string(),
+  type: z.literal("ask_mcq"),
   stem: z.string(),
   choices: z.array(z.string()),
   questionIdx: z.number().int().nonnegative(),
@@ -54,6 +56,11 @@ export const AskQuestionEventSchema = z.object({
 export const AskQuestionResponseSchema = z.object({
   selectedIndex: z.number().int().nonnegative(),
 });
+
+export const LessonInterruptEventSchema = z.discriminatedUnion("type", [
+  ApprovePlanEventSchema,
+  AskQuestionEventSchema,
+]);
 
 export type Difficulty = z.infer<typeof DifficultySchema>;
 export type Objective = z.infer<typeof ObjectiveSchema>;

@@ -1,24 +1,28 @@
 import { getModel } from "../model.js";
 import type { LessonStateType, AttemptRecord } from "../state.js";
 
-export function computeScore(attempts: AttemptRecord[], totalQuestions: number) {
-  const byQuestion = new Map<number, AttemptRecord[]>();
+export function computeScore(attempts: AttemptRecord[]) {
+  const byQuestion = new Map<string, AttemptRecord[]>();
   for (const a of attempts) {
-    byQuestion.set(a.questionIdx, [...(byQuestion.get(a.questionIdx) ?? []), a]);
+    byQuestion.set(a.questionId, [...(byQuestion.get(a.questionId) ?? []), a]);
   }
   let firstTryCorrect = 0;
   for (const [, list] of byQuestion) {
     const first = list.find((a) => a.attemptNo === 1);
     if (first?.isCorrect) firstTryCorrect++;
   }
-  return { firstTryCorrect, total: totalQuestions };
+  // The flow guarantees every asked question gets at least one attempt, so the
+  // distinct attempted questions are exactly the questions covered — state
+  // only holds the *current* objective's batch, so questions.length would
+  // undercount a multi-objective lesson.
+  return { firstTryCorrect, total: byQuestion.size };
 }
 
 export async function summarizeNode(
   state: LessonStateType,
   model = getModel(),
 ): Promise<Partial<LessonStateType>> {
-  const score = computeScore(state.attempts, state.questions.length || state.attempts.length);
+  const score = computeScore(state.attempts);
   const tips = await model.invoke([
     {
       role: "system",

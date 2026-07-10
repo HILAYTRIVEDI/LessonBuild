@@ -1,19 +1,13 @@
-import { createServer } from "node:http";
 import { runMigrations } from "@lessonbuild/db";
+import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 
-await runMigrations().catch((e: unknown) => {
-  console.error("migration failed", e);
-  process.exit(1);
-});
-
-// Lightweight health endpoint for Docker; the LangGraph CLI serves the graph itself in dev.
-const port = Number(process.env["AGENT_HEALTH_PORT"] ?? 2024);
-createServer((req, res) => {
-  if (req.url === "/ok") {
-    res.writeHead(200);
-    res.end("ok");
-    return;
+try {
+  await runMigrations();
+  const databaseUrl = process.env["DATABASE_URL"];
+  if (databaseUrl) {
+    await PostgresSaver.fromConnString(databaseUrl).setup();
   }
-  res.writeHead(404);
-  res.end();
-}).listen(port);
+} catch (e: unknown) {
+  console.error("startup preparation failed", e);
+  process.exit(1);
+}

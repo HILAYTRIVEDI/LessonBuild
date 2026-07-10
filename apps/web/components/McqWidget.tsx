@@ -25,9 +25,6 @@ export function McqWidget({
     if (feedback && i === feedback.selectedIndex) {
       return feedback.isCorrect ? "border-success bg-success/10" : "border-error bg-error/10";
     }
-    if (feedback && !feedback.isCorrect && i === feedback.correctIndex) {
-      return "border-success bg-success/10";
-    }
     return selected === i ? "border-primary bg-primary/10" : "border-border";
   }
 

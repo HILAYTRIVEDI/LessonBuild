@@ -35,12 +35,18 @@ COPY --from=prod-deps --chown=agent:nodejs /app/node_modules ./node_modules
 COPY --from=prod-deps --chown=agent:nodejs /app/apps/agent/node_modules ./apps/agent/node_modules
 COPY --from=build --chown=agent:nodejs /app/apps/agent/dist ./apps/agent/dist
 COPY --from=build --chown=agent:nodejs /app/apps/agent/langgraph.json ./apps/agent/
+COPY --from=build --chown=agent:nodejs /app/apps/agent/src ./apps/agent/src
+COPY --from=build --chown=agent:nodejs /app/packages/db/src ./packages/db/src
+COPY --from=build --chown=agent:nodejs /app/packages/db/package.json ./packages/db/
+COPY --from=build --chown=agent:nodejs /app/packages/shared/src ./packages/shared/src
+COPY --from=build --chown=agent:nodejs /app/packages/shared/package.json ./packages/shared/
 # runMigrations() resolves the SQL file relative to its own __dirname, which
 # after bundling into apps/agent/dist is one level up from packages/db/dist —
 # mirror that relative layout here.
 COPY --from=build --chown=agent:nodejs /app/packages/db/migrations ./apps/agent/migrations
+RUN touch apps/agent/.env && chown agent:nodejs apps/agent/.env
 USER agent
 EXPOSE 2024
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-  CMD wget -qO- http://localhost:2024/ok || exit 1
-CMD ["node", "apps/agent/dist/server.js"]
+  CMD wget -qO- http://0.0.0.0:2024/info || exit 1
+CMD ["sh", "-c", "node apps/agent/dist/server.js && cd apps/agent && ./node_modules/.bin/langgraphjs dev --host 0.0.0.0 --port 2024 --no-browser"]

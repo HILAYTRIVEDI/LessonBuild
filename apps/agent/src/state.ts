@@ -3,7 +3,9 @@ import type { BaseMessage } from "@langchain/core/messages";
 import type { LessonPlan, Mcq } from "@lessonbuild/shared";
 
 export type AttemptRecord = {
-  questionIdx: number;
+  // DB id of the question, unique across objectives. currentQuestionIdx resets
+  // to 0 per objective, so an index-keyed record would collide across batches.
+  questionId: string;
   selectedIndex: number;
   isCorrect: boolean;
   attemptNo: number;
@@ -14,6 +16,7 @@ export const LessonState = Annotation.Root({
   lessonId: Annotation<string>({ reducer: (_, n) => n, default: () => "" }),
   lessonPlan: Annotation<LessonPlan | null>({ reducer: (_, n) => n, default: () => null }),
   planApproved: Annotation<boolean>({ reducer: (_, n) => n, default: () => false }),
+  planFeedback: Annotation<string | null>({ reducer: (_, n) => n, default: () => null }),
   objectiveIds: Annotation<string[]>({ reducer: (_, n) => n, default: () => [] }),
   currentObjectiveIdx: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
   questions: Annotation<Mcq[]>({ reducer: (_, n) => n, default: () => [] }),

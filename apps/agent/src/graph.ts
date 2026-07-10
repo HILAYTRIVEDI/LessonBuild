@@ -2,7 +2,7 @@ import { StateGraph, START, END } from "@langchain/langgraph";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { LessonState } from "./state.js";
 import { planNode } from "./nodes/plan.js";
-import { approvePlanNode } from "./nodes/approvePlan.js";
+import { approvePlanNode, routeAfterApprove } from "./nodes/approvePlan.js";
 import { generateQuestionsNode } from "./nodes/generateQuestions.js";
 import { askQuestionNode } from "./nodes/askQuestion.js";
 import { evaluateNode, routeAfterEvaluate } from "./nodes/evaluate.js";
@@ -20,7 +20,10 @@ export function buildGraph(checkpointer?: BaseCheckpointSaver) {
     .addNode("summarize", (state) => summarizeNode(state))
     .addEdge(START, "plan")
     .addEdge("plan", "approvePlan")
-    .addEdge("approvePlan", "generateQuestions")
+    .addConditionalEdges("approvePlan", routeAfterApprove, {
+      plan: "plan",
+      generateQuestions: "generateQuestions",
+    })
     .addEdge("generateQuestions", "askQuestion")
     .addEdge("askQuestion", "evaluate")
     .addConditionalEdges("evaluate", routeAfterEvaluate, {
@@ -42,6 +45,5 @@ let _checkpointer: PostgresSaver | undefined;
 const databaseUrl = process.env["DATABASE_URL"];
 if (databaseUrl) {
   _checkpointer = PostgresSaver.fromConnString(databaseUrl);
-  await _checkpointer.setup();
 }
 export const graph = buildGraph(_checkpointer);
