@@ -1,18 +1,25 @@
 import { describe, it, expect, vi } from "vitest";
+import { getQuestionAnswer } from "@lessonbuild/db";
 import { evaluateNode, routeAfterEvaluate } from "./evaluate";
 
-vi.mock("@lessonbuild/db", () => ({ recordAttempt: vi.fn(async () => {}) }));
+vi.mock("@lessonbuild/db", () => ({
+  recordAttempt: vi.fn(async () => {}),
+  getQuestionAnswer: vi.fn(async () => ({ correctIndex: 1, explanation: "e" })),
+}));
 
 const baseState = {
-  questions: [{ stem: "Q", choices: ["a", "b"], correctIndex: 1, explanation: "e", hint: "h" }],
+  // Sanitized shape: state questions carry no correctIndex — the key comes
+  // from the mocked DB lookup.
+  questions: [{ stem: "Q", choices: ["a", "b"], hint: "h" }],
   questionIds: ["q-1"],
   currentQuestionIdx: 0,
   attempts: [] as { questionId: string }[],
 };
 
 describe("evaluateNode", () => {
-  it("marks a correct answer and increments attempt number", async () => {
+  it("marks a correct answer using the DB answer key", async () => {
     const out = await evaluateNode({ ...baseState, lastSelectedIndex: 1 } as never);
+    expect(vi.mocked(getQuestionAnswer)).toHaveBeenCalledWith("q-1");
     expect(out.attempts![0]).toMatchObject({
       questionId: "q-1",
       isCorrect: true,
@@ -31,9 +38,7 @@ describe("evaluateNode", () => {
     const out = await evaluateNode({ ...baseState, lastSelectedIndex: 1 } as never);
     expect(routeAfterEvaluate({ ...baseState, attempts: out.attempts } as never)).toBe("advance");
   });
-  it("keys attempt counts by questionId, not the per-objective index", async () => {
-    // A prior attempt on a *different* question that happened to sit at the
-    // same index (previous objective's batch) must not inflate attemptNo.
+  it("keys attempt counts by questionId, not the index", async () => {
     const out = await evaluateNode({
       ...baseState,
       attempts: [{ questionId: "other-q", selectedIndex: 0, isCorrect: false, attemptNo: 1 }],
