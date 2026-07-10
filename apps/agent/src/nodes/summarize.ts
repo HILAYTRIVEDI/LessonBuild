@@ -11,10 +11,8 @@ export function computeScore(attempts: AttemptRecord[]) {
     const first = list.find((a) => a.attemptNo === 1);
     if (first?.isCorrect) firstTryCorrect++;
   }
-  // The flow guarantees every asked question gets at least one attempt, so the
-  // distinct attempted questions are exactly the questions covered — state
-  // only holds the *current* objective's batch, so questions.length would
-  // undercount a multi-objective lesson.
+  // The flow guarantees every asked question gets at least one attempt, so
+  // the distinct attempted questions are exactly the questions covered.
   return { firstTryCorrect, total: byQuestion.size };
 }
 

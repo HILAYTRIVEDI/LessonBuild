@@ -3,8 +3,8 @@ import type { BaseMessage } from "@langchain/core/messages";
 import type { LessonPlan, SafeMcq } from "@lessonbuild/shared";
 
 export type AttemptRecord = {
-  // DB id of the question, unique across objectives. currentQuestionIdx resets
-  // to 0 per objective, so an index-keyed record would collide across batches.
+  // DB id of the question — a stable key independent of the learner's
+  // position, unlike currentQuestionIdx which moves as the quiz advances.
   questionId: string;
   selectedIndex: number;
   isCorrect: boolean;

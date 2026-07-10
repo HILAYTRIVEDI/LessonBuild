@@ -93,6 +93,8 @@ export async function generateQuestionsNode(
   const questions: SafeMcq[] = [];
   const questionIds: string[] = [];
   for (let i = 0; i < batch.objectives.length; i++) {
+    // Safe: the schema pins batch.objectives.length to objectives.length,
+    // and objectiveIds is saved 1:1 from the same approved plan's objectives.
     const objectiveId = state.objectiveIds[i]!;
     for (const q of batch.objectives[i]!.questions) {
       questionIds.push(await saveQuestion(objectiveId, q));

@@ -14,6 +14,9 @@ export async function askQuestionNode(state: LessonStateType): Promise<Partial<L
   // state questions are sanitized — so fetch it by id when it's safe to show.
   let feedback: AskQuestionFeedback | undefined;
   if (lastAttempt) {
+    // The isCorrect branch is defensive: a correct answer advances to the next
+    // question, which has no attempts yet, so re-asks normally only follow a
+    // wrong answer. It stays as a safeguard against replays/graph re-entry.
     const text = lastAttempt.isCorrect
       ? (await getQuestionAnswer(questionId)).explanation
       : question.hint;
