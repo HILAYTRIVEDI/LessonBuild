@@ -7,6 +7,7 @@ import {
   useCopilotAdditionalInstructions,
   useCoAgent,
 } from "@copilotkit/react-core";
+import { useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
 import { LessonInterruptEventSchema } from "@lessonbuild/shared";
 import type {
   ApprovePlanResponse,
@@ -59,12 +60,17 @@ export default function Home() {
   const {
     state: agentState,
     setState: setAgentState,
-    run,
     running,
   } = useCoAgent<LessonAgentState>({
     name: "lesson",
     initialState: { lessonId: null, report: null },
   });
+  // useCoAgent's `run`/`start` hand back agent.runAgent unbound, which crashes
+  // with "Cannot set properties of undefined (setting 'abortController')" when
+  // invoked as a plain function. Run through copilotkit.runAgent({ agent })
+  // instead — the same path the chat send and interrupt-resolve flows use.
+  const { agent } = useAgent({ agentId: "lesson" });
+  const { copilotkit } = useCopilotKit();
 
   useCopilotAdditionalInstructions({ instructions: HINT_GUARDRAIL_INSTRUCTIONS });
 
@@ -135,7 +141,8 @@ export default function Home() {
   function onStart() {
     setRunError(null);
     setStarting(true);
-    void run()
+    void copilotkit
+      .runAgent({ agent })
       .catch(() => {
         setRunError("The lesson could not start — please try again.");
       })
