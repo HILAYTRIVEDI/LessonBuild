@@ -34,5 +34,16 @@ export async function askQuestionNode(state: LessonStateType): Promise<Partial<L
     totalQuestions: state.questions.length,
     ...(feedback ? { feedback } : {}),
   });
-  return { lastSelectedIndex: AskQuestionResponseSchema.parse(resumed).selectedIndex };
+  const response = AskQuestionResponseSchema.parse(resumed);
+  if (response.action === "continue") {
+    if (!lastAttempt?.isCorrect) {
+      throw new Error("askQuestion: cannot continue before answering correctly.");
+    }
+    return { readyToAdvance: true, lastSelectedIndex: null };
+  }
+  return { readyToAdvance: false, lastSelectedIndex: response.selectedIndex };
+}
+
+export function routeAfterAskQuestion(state: LessonStateType): "advance" | "evaluate" {
+  return state.readyToAdvance ? "advance" : "evaluate";
 }

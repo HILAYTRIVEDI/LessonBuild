@@ -63,9 +63,19 @@ export const AskQuestionEventSchema = z.object({
   feedback: AskQuestionFeedbackSchema.optional(),
 });
 
-export const AskQuestionResponseSchema = z.object({
+export const SubmitAnswerResponseSchema = z.object({
+  action: z.literal("submit"),
   selectedIndex: z.number().int().nonnegative(),
 });
+
+export const ContinueQuestionResponseSchema = z.object({
+  action: z.literal("continue"),
+});
+
+export const AskQuestionResponseSchema = z.discriminatedUnion("action", [
+  SubmitAnswerResponseSchema,
+  ContinueQuestionResponseSchema,
+]);
 
 export const LessonInterruptEventSchema = z.discriminatedUnion("type", [
   ApprovePlanEventSchema,

@@ -14,11 +14,9 @@ export async function evaluateNode(state: LessonStateType): Promise<Partial<Less
   await recordAttempt({ questionId, selectedIndex, isCorrect, attemptNo });
 
   const record: AttemptRecord = { questionId, selectedIndex, isCorrect, attemptNo };
-  return { attempts: [record] };
+  return { attempts: [record], readyToAdvance: false };
 }
 
-export function routeAfterEvaluate(state: LessonStateType): "advance" | "askQuestion" {
-  const questionId = state.questionIds[state.currentQuestionIdx]!;
-  const last = [...state.attempts].reverse().find((a) => a.questionId === questionId);
-  return last?.isCorrect ? "advance" : "askQuestion";
+export function routeAfterEvaluate(): "askQuestion" {
+  return "askQuestion";
 }

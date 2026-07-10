@@ -30,13 +30,12 @@ describe("evaluateNode", () => {
   it("marks an incorrect answer without penalty (retry allowed)", async () => {
     const out = await evaluateNode({ ...baseState, lastSelectedIndex: 0 } as never);
     expect(out.attempts![0]!.isCorrect).toBe(false);
-    expect(routeAfterEvaluate({ ...baseState, attempts: out.attempts } as never)).toBe(
-      "askQuestion",
-    );
+    expect(routeAfterEvaluate()).toBe("askQuestion");
   });
-  it("routes to advance after a correct answer", async () => {
+  it("routes back to the question after a correct answer so the explanation is shown", async () => {
     const out = await evaluateNode({ ...baseState, lastSelectedIndex: 1 } as never);
-    expect(routeAfterEvaluate({ ...baseState, attempts: out.attempts } as never)).toBe("advance");
+    expect(out.attempts![0]!.isCorrect).toBe(true);
+    expect(routeAfterEvaluate()).toBe("askQuestion");
   });
   it("keys attempt counts by questionId, not the index", async () => {
     const out = await evaluateNode({

@@ -274,7 +274,10 @@ export default function Home() {
             {...(stage.interrupt.event.feedback
               ? { feedback: stage.interrupt.event.feedback }
               : {})}
-            onSubmit={(selectedIndex) => stage.interrupt.respond({ selectedIndex })}
+            onSubmit={(selectedIndex) =>
+              stage.interrupt.respond({ action: "submit", selectedIndex })
+            }
+            onContinue={() => stage.interrupt.respond({ action: "continue" })}
           />
         </div>
       )}
