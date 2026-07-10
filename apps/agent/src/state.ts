@@ -18,7 +18,6 @@ export const LessonState = Annotation.Root({
   planApproved: Annotation<boolean>({ reducer: (_, n) => n, default: () => false }),
   planFeedback: Annotation<string | null>({ reducer: (_, n) => n, default: () => null }),
   objectiveIds: Annotation<string[]>({ reducer: (_, n) => n, default: () => [] }),
-  currentObjectiveIdx: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
   // Sanitized on purpose: CopilotKit streams this state to the browser, so it
   // must never contain correctIndex/explanation. Full rows live in Postgres.
   questions: Annotation<SafeMcq[]>({ reducer: (_, n) => n, default: () => [] }),

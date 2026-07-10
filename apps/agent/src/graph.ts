@@ -33,9 +33,10 @@ export function buildGraph(checkpointer?: BaseCheckpointSaver) {
       advance: "advance",
       askQuestion: "askQuestion",
     })
+    // Generation runs exactly once, right after plan approval — advance only
+    // walks the pre-generated global question list.
     .addConditionalEdges("advance", routeAfterAdvance, {
       askQuestion: "askQuestion",
-      generateQuestions: "generateQuestions",
       summarize: "summarize",
     })
     .addEdge("summarize", END);
