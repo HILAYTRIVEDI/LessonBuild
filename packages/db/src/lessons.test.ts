@@ -9,6 +9,7 @@ import {
   saveQuestion,
   recordAttempt,
   getAttempts,
+  getQuestionAnswer,
 } from "./lessons";
 
 beforeAll(async () => {
@@ -40,5 +41,27 @@ describe("lesson data access", () => {
     const attempts = await getAttempts(lessonId);
     expect(attempts).toHaveLength(2);
     expect(attempts.filter((a) => a.isCorrect)).toHaveLength(1);
+  });
+
+  it("returns the answer key for a saved question by id", async () => {
+    const lessonId = await createLesson({ title: "T2", sourceFilename: "t.pdf", docText: "x" });
+    const [objId] = await saveObjectives(lessonId, [
+      { title: "O1", difficulty: "beginner", description: "d" },
+    ]);
+    const qId = await saveQuestion(objId as string, {
+      stem: "Q",
+      choices: ["a", "b", "c"],
+      correctIndex: 2,
+      explanation: "because c",
+      hint: "h",
+    });
+    const answer = await getQuestionAnswer(qId);
+    expect(answer).toEqual({ correctIndex: 2, explanation: "because c" });
+  });
+
+  it("throws for an unknown question id", async () => {
+    await expect(
+      getQuestionAnswer("00000000-0000-0000-0000-000000000000"),
+    ).rejects.toThrow(/not found/);
   });
 });
