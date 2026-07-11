@@ -109,6 +109,9 @@ cp .env.example .env
 | `POSTGRES_DB`       | Yes for Docker | docker-compose         | Postgres database name                                         |
 | `DATABASE_URL`      | Yes            | web, agent, db package | Postgres connection string                                     |
 | `LANGGRAPH_URL`     | Yes for web    | web                    | LangGraph API URL, usually `http://localhost:2024` locally     |
+| `PORT`              | No             | agent                  | Agent server port, defaults in code to `2024`                  |
+| `HOST`              | No             | agent                  | Agent server bind host, defaults in code to `0.0.0.0`          |
+| `N_WORKERS`         | No             | agent                  | Agent worker count, defaults in code to `10`                   |
 
 Local default:
 
@@ -119,6 +122,21 @@ LANGGRAPH_URL=http://localhost:2024
 
 Docker Compose overrides service-to-service URLs internally so `web` talks to `agent:2024`
 and both app services talk to `postgres:5432`.
+
+### Single source of truth for `.env`
+
+There is exactly one `.env` file — the one at the repo root. Docker Compose (`env_file: .env`)
+and the agent (`langgraph.json` → `"env": ".env"`) both read it directly.
+
+Next.js only loads `.env` from its own app directory, so local `pnpm --filter web dev` needs a
+`.env` inside `apps/web`. Rather than keep a second copy that can drift, symlink it to the root file:
+
+```bash
+ln -s ../../.env apps/web/.env
+```
+
+Do this once after cloning. Now root `.env` is the only file you ever edit, and the web app sees the
+same values. (`.env` files are gitignored, so the symlink is a per-clone local setup step.)
 
 ## Quick Start With Docker
 
