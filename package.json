@@ -6,6 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "dev": "pnpm --parallel --filter=./apps/web --filter=./apps/agent dev",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
