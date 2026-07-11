@@ -44,6 +44,10 @@ export const ApprovePlanResponseSchema = z.object({
   approved: z.boolean(),
   // Learner's change request when approved is false; fed back into the planner.
   feedback: z.string().optional(),
+  // One entry per plan objective: how many MCQs to generate (0 = topic skipped).
+  // Optional so "ask for changes" responses and legacy payloads stay valid;
+  // length-vs-plan validation happens in the agent, which can see the plan.
+  questionCounts: z.array(z.number().int().min(0).max(5)).optional(),
 });
 
 // Deliberately excludes correctIndex: this payload reaches the browser while

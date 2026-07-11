@@ -18,6 +18,9 @@ export const LessonState = Annotation.Root({
   planApproved: Annotation<boolean>({ reducer: (_, n) => n, default: () => false }),
   planFeedback: Annotation<string | null>({ reducer: (_, n) => n, default: () => null }),
   objectiveIds: Annotation<string[]>({ reducer: (_, n) => n, default: () => [] }),
+  // Per-objective MCQ counts from the approved plan (0 = topic skipped).
+  // Same length as lessonPlan.objectives once the plan is approved.
+  questionCounts: Annotation<number[]>({ reducer: (_, n) => n, default: () => [] }),
   // Sanitized on purpose: CopilotKit streams this state to the browser, so it
   // must never contain correctIndex/explanation. Full rows live in Postgres.
   questions: Annotation<SafeMcq[]>({ reducer: (_, n) => n, default: () => [] }),
