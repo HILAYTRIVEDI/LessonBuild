@@ -1,5 +1,6 @@
 import { StateGraph, START, END } from "@langchain/langgraph";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
+import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { LessonState } from "./state.js";
 import { hydrateNode } from "./nodes/hydrate.js";
 import { planNode } from "./nodes/plan.js";
@@ -50,7 +51,6 @@ export function buildGraph(checkpointer?: BaseCheckpointSaver) {
   return workflow.compile(checkpointer ? { checkpointer } : undefined);
 }
 
-import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 let _checkpointer: PostgresSaver | undefined;
 const databaseUrl = process.env["DATABASE_URL"];
 if (databaseUrl) {
