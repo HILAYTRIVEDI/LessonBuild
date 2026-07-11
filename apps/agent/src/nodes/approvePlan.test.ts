@@ -8,6 +8,14 @@ const plan = {
   objectives: [{ title: "A", difficulty: "beginner" as const, description: "d" }],
 };
 
+const twoTopicPlan = {
+  overallDifficulty: "beginner" as const,
+  objectives: [
+    { title: "A", difficulty: "beginner" as const, description: "dA" },
+    { title: "B", difficulty: "beginner" as const, description: "dB" },
+  ],
+};
+
 function buildTestGraph() {
   const workflow = new StateGraph(LessonState)
     .addNode("approvePlan", approvePlanNode)
@@ -61,6 +69,54 @@ describe("approvePlanNode", () => {
     await expect(
       graph.invoke(new Command({ resume: { approved: "yes" } }), config),
     ).rejects.toThrow();
+  });
+
+  it("stores per-topic question counts from the approval", async () => {
+    const graph = buildTestGraph();
+    const config = { configurable: { thread_id: "t-5" } };
+
+    await graph.invoke({ lessonPlan: twoTopicPlan }, config);
+    const out = await graph.invoke(
+      new Command({ resume: { approved: true, questionCounts: [3, 0] } }),
+      config,
+    );
+
+    expect(out.planApproved).toBe(true);
+    expect(out.questionCounts).toEqual([3, 0]);
+  });
+
+  it("defaults to 2 questions per topic when the approval omits counts", async () => {
+    const graph = buildTestGraph();
+    const config = { configurable: { thread_id: "t-6" } };
+
+    await graph.invoke({ lessonPlan: twoTopicPlan }, config);
+    const out = await graph.invoke(new Command({ resume: { approved: true } }), config);
+
+    expect(out.questionCounts).toEqual([2, 2]);
+  });
+
+  it("rejects counts whose length does not match the plan", async () => {
+    const graph = buildTestGraph();
+    const config = { configurable: { thread_id: "t-7" } };
+
+    await graph.invoke({ lessonPlan: twoTopicPlan }, config);
+
+    await expect(
+      graph.invoke(new Command({ resume: { approved: true, questionCounts: [2] } }), config),
+    ).rejects.toThrow(/questionCounts/);
+  });
+
+  it("ignores counts on a rejection resume", async () => {
+    const graph = buildTestGraph();
+    const config = { configurable: { thread_id: "t-8" } };
+
+    await graph.invoke({ lessonPlan: twoTopicPlan }, config);
+    const out = await graph.invoke(
+      new Command({ resume: { approved: false, feedback: "redo", questionCounts: [5, 5] } }),
+      config,
+    );
+
+    expect(out.questionCounts).toEqual([]);
   });
 });
 
