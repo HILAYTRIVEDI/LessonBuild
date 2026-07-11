@@ -21,6 +21,6 @@ next-env.d.ts
 
 # Ignore Agent Files
 AGENT.md
-AGENTs.md
+AGENTS.md
 CLAUDE.md
 docs

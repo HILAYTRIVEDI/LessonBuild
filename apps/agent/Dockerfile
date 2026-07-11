@@ -34,7 +34,6 @@ RUN addgroup -S nodejs && adduser -S agent -G nodejs
 COPY --from=prod-deps --chown=agent:nodejs /app/node_modules ./node_modules
 COPY --from=prod-deps --chown=agent:nodejs /app/apps/agent/node_modules ./apps/agent/node_modules
 COPY --from=build --chown=agent:nodejs /app/apps/agent/dist ./apps/agent/dist
-COPY --from=build --chown=agent:nodejs /app/apps/agent/langgraph.json ./apps/agent/
 COPY --from=build --chown=agent:nodejs /app/apps/agent/src ./apps/agent/src
 COPY --from=build --chown=agent:nodejs /app/packages/db/src ./packages/db/src
 COPY --from=build --chown=agent:nodejs /app/packages/db/package.json ./packages/db/
