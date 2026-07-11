@@ -4,6 +4,10 @@ import type { AskQuestionEvent, AskQuestionFeedback } from "@lessonbuild/shared"
 import { getQuestionAnswer } from "@lessonbuild/db";
 import type { LessonStateType } from "../state.js";
 
+/**
+ * Presents the current sanitized MCQ as a LangGraph interrupt and parses the
+ * learner's resume payload from CopilotKit.
+ */
 export async function askQuestionNode(state: LessonStateType): Promise<Partial<LessonStateType>> {
   const idx = state.currentQuestionIdx;
   const question = state.questions[idx]!;
@@ -44,6 +48,7 @@ export async function askQuestionNode(state: LessonStateType): Promise<Partial<L
   return { readyToAdvance: false, lastSelectedIndex: response.selectedIndex };
 }
 
+/** Continues only after correct-answer acknowledgement; submissions go evaluate. */
 export function routeAfterAskQuestion(state: LessonStateType): "advance" | "evaluate" {
   return state.readyToAdvance ? "advance" : "evaluate";
 }

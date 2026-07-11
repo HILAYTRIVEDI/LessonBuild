@@ -1,5 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 
+/** Builds the configured AI/ML API-backed chat model for all agent nodes. */
 export function getModel() {
   const apiKey = process.env["AIMLAPI_KEY"];
   if (!apiKey) {

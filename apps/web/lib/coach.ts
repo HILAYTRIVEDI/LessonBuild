@@ -38,6 +38,10 @@ export type CoachMessage = z.infer<typeof CoachMessageSchema>;
 export type CoachRequest = z.infer<typeof CoachRequestSchema>;
 export type CoachQuestionContext = z.infer<typeof CoachQuestionContextSchema>;
 
+/*
+ * The coach shares the active question with the model so it can give useful
+ * help, but the prompt keeps the response in hint mode instead of answer mode.
+ */
 export const COACH_SYSTEM_PROMPT =
   "You are Lesson Coach, a supportive tutor for a PDF-based lesson. " +
   "Use the provided lesson context and active multiple-choice question to explain concepts, " +
@@ -66,6 +70,10 @@ export function buildCoachUserContext(input: {
   activeQuestion: CoachQuestionContext | null;
   message: string;
 }): string {
+  /*
+   * Keep source text, quiz context, and learner text in explicit sections so
+   * the model can ground its answer without treating the MCQ choices as keys.
+   */
   const context = input.lessonContext.trim() || "No lesson source context is available yet.";
   return [
     "Lesson source context:",

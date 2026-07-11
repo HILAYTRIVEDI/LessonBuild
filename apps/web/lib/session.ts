@@ -1,4 +1,6 @@
 const THREAD_KEY = "lessonbuild.threadId";
+
+/** Storage and cookie key for the currently selected lesson id. */
 export const LESSON_KEY = "lessonbuild.lessonId";
 
 function storage(): Storage | null {
@@ -32,15 +34,18 @@ export function getOrCreateThreadId(): string {
   return created;
 }
 
+/** Loads the browser-persisted lesson id, if one exists. */
 export function loadLessonId(): string | null {
   return storage()?.getItem(LESSON_KEY) ?? null;
 }
 
+/** Persists the lesson id in localStorage and a server-readable cookie. */
 export function saveLessonId(lessonId: string): void {
   storage()?.setItem(LESSON_KEY, lessonId);
   setCookie(lessonId);
 }
 
+/** Clears local lesson and Copilot thread state before starting over. */
 export function clearSession(): void {
   const store = storage();
   store?.removeItem(THREAD_KEY);

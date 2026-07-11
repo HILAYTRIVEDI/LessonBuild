@@ -1,4 +1,6 @@
 "use client";
+
+/** Presents the final progress report returned by the lesson graph. */
 export function ProgressReport({ report }: { report: string }) {
   const [headline, ...rest] = report.split("\n\n");
   return (

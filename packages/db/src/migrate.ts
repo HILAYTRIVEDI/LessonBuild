@@ -5,6 +5,7 @@ import { pool } from "./client";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+/** Applies the idempotent database schema required by the LessonBuild demo. */
 export async function runMigrations(): Promise<void> {
   const sql = readFileSync(join(__dirname, "../migrations/001_init.sql"), "utf8");
   await pool.query(sql);

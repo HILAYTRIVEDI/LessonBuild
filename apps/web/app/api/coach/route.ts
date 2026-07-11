@@ -8,6 +8,7 @@ import {
   buildCoachUserContext,
 } from "@/lib/coach";
 
+/** Lesson Coach needs Node APIs for DB retrieval and AI/ML API calls. */
 export const runtime = "nodejs";
 
 async function parseRequest(req: Request): Promise<unknown> {
@@ -20,9 +21,17 @@ async function parseRequest(req: Request): Promise<unknown> {
 
 async function loadLessonContext(lessonId: string | null, queryText: string): Promise<string> {
   if (!lessonId) return "";
+  /*
+   * Retrieval is scoped to the active question plus the learner's message so
+   * the coach answers from nearby PDF evidence instead of the whole document.
+   */
   return retrieveLessonContext({ lessonId, queryText, limit: 4 });
 }
 
+/**
+ * Handles guardrailed coach chat turns by validating browser input, retrieving
+ * lesson context, and returning a schema-checked model response.
+ */
 export async function POST(req: Request) {
   const parsed = CoachRequestSchema.safeParse(await parseRequest(req));
   if (!parsed.success) {
@@ -35,7 +44,15 @@ export async function POST(req: Request) {
   }
 
   const { message, lessonId, activeQuestion, history } = parsed.data;
-  const lessonContext = await loadLessonContext(lessonId, `${activeQuestion?.stem ?? ""}\n${message}`);
+  const lessonContext = await loadLessonContext(
+    lessonId,
+    `${activeQuestion?.stem ?? ""}\n${message}`,
+  );
+  /*
+   * History is intentionally bounded by the request schema. The final user
+   * message re-injects fresh retrieved context each turn so old chat state
+   * cannot become the only source of truth.
+   */
   const response = await fetch("https://api.aimlapi.com/v1/chat/completions", {
     method: "POST",
     headers: {

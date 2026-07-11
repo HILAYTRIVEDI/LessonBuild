@@ -2,6 +2,7 @@ import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import type { BaseMessage } from "@langchain/core/messages";
 import type { LessonPlan, SafeMcq } from "@lessonbuild/shared";
 
+/** Append-only attempt record mirrored from Postgres for routing and scoring. */
 export type AttemptRecord = {
   // DB id of the question — a stable key independent of the learner's
   // position, unlike currentQuestionIdx which moves as the quiz advances.
@@ -11,6 +12,10 @@ export type AttemptRecord = {
   attemptNo: number;
 };
 
+/**
+ * LangGraph state contract for the lesson lifecycle. Anything stored here may
+ * be streamed to the browser, so answer keys and explanations remain in DB.
+ */
 export const LessonState = Annotation.Root({
   docText: Annotation<string>({ reducer: (_, n) => n, default: () => "" }),
   lessonId: Annotation<string>({ reducer: (_, n) => n, default: () => "" }),
@@ -36,4 +41,5 @@ export const LessonState = Annotation.Root({
   messages: Annotation<BaseMessage[]>({ reducer: messagesStateReducer, default: () => [] }),
 });
 
+/** Inferred state shape passed to every graph node. */
 export type LessonStateType = typeof LessonState.State;

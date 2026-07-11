@@ -1,6 +1,10 @@
 import { recordAttempt, getQuestionAnswer } from "@lessonbuild/db";
 import type { LessonStateType, AttemptRecord } from "../state.js";
 
+/**
+ * Compares the learner's selected index with the answer key in Postgres and
+ * records the attempt without exposing the key to graph state.
+ */
 export async function evaluateNode(state: LessonStateType): Promise<Partial<LessonStateType>> {
   const questionId = state.questionIds[state.currentQuestionIdx]!;
   const selectedIndex = state.lastSelectedIndex ?? -1;
@@ -17,6 +21,7 @@ export async function evaluateNode(state: LessonStateType): Promise<Partial<Less
   return { attempts: [record], readyToAdvance: false };
 }
 
+/** Evaluation always re-enters `askQuestion` to show feedback or accept retry. */
 export function routeAfterEvaluate(): "askQuestion" {
   return "askQuestion";
 }

@@ -14,6 +14,10 @@ import {
 
 const ACCENTS = ["#FF6FB6", "#0D99FF", "#FEA421", "#14AE5C", "#9747FF", "#0393B5"];
 
+/**
+ * Renders the human-in-the-loop plan approval surface, including optional
+ * per-topic MCQ counts that become the agent's generation contract.
+ */
 export function PlanApprovalCard({
   plan,
   onRespond,
@@ -30,8 +34,8 @@ export function PlanApprovalCard({
       <h3 className="text-lg font-bold">Proposed lesson plan</h3>
       <p className="text-sm text-text-muted">Difficulty: {plan.overallDifficulty}</p>
       <p className="mt-1 text-sm text-text-muted">
-        Pick the topics to be quizzed on and how many questions each gets. Unchecked topics stay
-        in the lesson without questions.
+        Pick the topics to be quizzed on and how many questions each gets. Unchecked topics stay in
+        the lesson without questions.
       </p>
       <ul className="mt-4 space-y-3">
         {plan.objectives.map((o, i) => {
