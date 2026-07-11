@@ -118,4 +118,58 @@ describe("generateQuestionsNode", () => {
       /did not return a valid set of questions/,
     );
   });
+
+  it("generates the configured number of questions per topic", async () => {
+    const batch = { objectives: [{ questions: [qA, qA, qA] }, { questions: [qB] }] };
+    const model = modelReturning({ parsed: batch, raw: {} });
+    const out = await generateQuestionsNode(
+      { ...baseState, questionCounts: [3, 1] } as never,
+      model as never,
+    );
+    expect(out.questions!.map((q) => q.stem)).toEqual(["QA", "QA", "QA", "QB"]);
+    expect(out.questionIds).toEqual(["q-obj-1", "q-obj-1", "q-obj-1", "q-obj-2"]);
+  });
+
+  it("rejects a batch whose per-topic sizes do not match the configured counts", async () => {
+    const wrong = { objectives: [{ questions: [qA, qA] }, { questions: [qB] }] }; // wants [3, 1]
+    const model = modelReturning({ parsed: null, raw: { tool_calls: [{ args: wrong }] } });
+    await expect(
+      generateQuestionsNode({ ...baseState, questionCounts: [3, 1] } as never, model as never),
+    ).rejects.toThrow(/did not return a valid set of questions/);
+  });
+
+  it("skips zero-count topics entirely — no retrieval, no prompt entry, correct id mapping", async () => {
+    const invoke = vi.fn(async (_messages: { content: string }[]) => ({
+      parsed: { objectives: [{ questions: [qB, qB] }] },
+      raw: {},
+    }));
+    const model = { withStructuredOutput: () => ({ invoke }) };
+    const out = await generateQuestionsNode(
+      { ...baseState, questionCounts: [0, 2] } as never,
+      model as never,
+    );
+
+    expect(out.questions!.map((q) => q.stem)).toEqual(["QB", "QB"]);
+    expect(out.questionIds).toEqual(["q-obj-2", "q-obj-2"]);
+    expect(vi.mocked(saveQuestion)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(saveQuestion)).toHaveBeenNthCalledWith(1, "obj-2", qB);
+    // Only the selected topic is retrieved and prompted.
+    expect(vi.mocked(retrieveLessonContext)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(retrieveLessonContext)).toHaveBeenCalledWith({
+      lessonId: "L1",
+      queryText: "B dB",
+    });
+    const userMsg = (invoke.mock.calls[0]![0] as { content: string }[]).find((m) =>
+      m.content.startsWith("Objectives:"),
+    )!;
+    expect(userMsg.content).not.toContain("A — dA");
+    expect(userMsg.content).toContain("B — dB");
+  });
+
+  it("throws when every topic is skipped", async () => {
+    const model = modelReturning({ parsed: null, raw: {} });
+    await expect(
+      generateQuestionsNode({ ...baseState, questionCounts: [0, 0] } as never, model as never),
+    ).rejects.toThrow(/at least one topic/i);
+  });
 });
