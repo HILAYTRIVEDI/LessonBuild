@@ -1,12 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { CopilotSidebar } from "@copilotkit/react-ui";
-import {
-  useLangGraphInterrupt,
-  useCopilotReadable,
-  useCopilotAdditionalInstructions,
-  useCoAgent,
-} from "@copilotkit/react-core";
+import { useLangGraphInterrupt, useCoAgent, useCopilotChatInternal } from "@copilotkit/react-core";
 import { useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
 import { LessonInterruptEventSchema } from "@lessonbuild/shared";
 import type {
@@ -15,10 +9,11 @@ import type {
   AskQuestionResponse,
 } from "@lessonbuild/shared";
 import type { z } from "zod";
+import { LessonCoachPanel } from "@/components/LessonCoachPanel";
 import { PlanApprovalCard } from "@/components/PlanApprovalCard";
 import { McqWidget } from "@/components/McqWidget";
 import { ProgressReport } from "@/components/ProgressReport";
-import { HINT_GUARDRAIL_INSTRUCTIONS, toGuardrailReadable } from "@/lib/guardrail";
+import { toGuardrailReadable } from "@/lib/guardrail";
 import { loadLessonId, saveLessonId, clearSession } from "@/lib/session";
 import { deriveStage } from "@/lib/stage";
 import type { PendingInterrupt } from "@/lib/stage";
@@ -49,6 +44,11 @@ function InterruptPublisher({
   return null;
 }
 
+function CopilotInterruptBridge() {
+  const { interrupt } = useCopilotChatInternal();
+  return interrupt;
+}
+
 export default function Home() {
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -72,8 +72,6 @@ export default function Home() {
   const { agent } = useAgent({ agentId: "lesson" });
   const { copilotkit } = useCopilotKit();
 
-  useCopilotAdditionalInstructions({ instructions: HINT_GUARDRAIL_INSTRUCTIONS });
-
   // Restore the lesson after a page refresh; runs once, before any agent run
   // can start, so the graph always sees the persisted lessonId.
   useEffect(() => {
@@ -96,11 +94,6 @@ export default function Home() {
     setAgentState((prev) => ({ lessonId, report: prev?.report ?? null }));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed to lessonId only to avoid looping on setAgentState identity
   }, [lessonId]);
-
-  useCopilotReadable({
-    description: "The learner's currently active question, with a prior hint if any.",
-    value: activeQuestion ? toGuardrailReadable(activeQuestion) : null,
-  });
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -155,6 +148,7 @@ export default function Home() {
   const onInterrupt = useCallback(
     (value: LessonInterruptEvent, resolve: (response: unknown) => void) => {
       if (value.type === "ask_mcq") setActiveQuestion(value);
+      if (value.type === "approve_plan") setActiveQuestion(null);
       setPending((prev) => {
         if (value.type === "approve_plan") {
           if (!value.plan) return prev;
@@ -219,95 +213,95 @@ export default function Home() {
   });
 
   return (
-    <main className="mx-auto max-w-3xl p-8 lg:p-12">
-      <h1 className="text-4xl font-bold">LessonBuild</h1>
-      <p className="mt-2 text-text-muted">Upload a PDF to build an interactive lesson.</p>
+    <main className="mx-auto grid max-w-6xl gap-8 p-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:p-12">
+      <section>
+        <h1 className="text-4xl font-bold">LessonBuild</h1>
+        <p className="mt-2 text-text-muted">Upload a PDF to build an interactive lesson.</p>
 
-      {(stage.kind === "upload" || stage.kind === "ready") && (
-        <>
-          <label className="mt-8 block cursor-pointer rounded-md border border-dashed border-border bg-surface-muted p-10 text-center shadow-card">
-            <input type="file" accept="application/pdf" className="hidden" onChange={onUpload} />
-            {busy
-              ? "Processing…"
-              : lessonId
-                ? `Lesson ready: ${lessonId}`
-                : "Click to choose a PDF"}
-          </label>
-          {uploadError ? (
-            <p className="mt-3 text-sm font-medium text-error">{uploadError}</p>
-          ) : null}
-          {stage.kind === "ready" && !busy ? (
-            <button
-              type="button"
-              className="mt-6 w-full rounded-md bg-primary px-6 py-3 text-lg font-semibold text-white shadow-card"
-              onClick={onStart}
-            >
-              Start lesson
-            </button>
-          ) : null}
-          {runError ? <p className="mt-3 text-sm font-medium text-error">{runError}</p> : null}
-        </>
-      )}
+        {(stage.kind === "upload" || stage.kind === "ready") && (
+          <>
+            <label className="mt-8 block cursor-pointer rounded-md border border-dashed border-border bg-surface-muted p-10 text-center shadow-card">
+              <input type="file" accept="application/pdf" className="hidden" onChange={onUpload} />
+              {busy
+                ? "Processing..."
+                : lessonId
+                  ? `Lesson ready: ${lessonId}`
+                  : "Click to choose a PDF"}
+            </label>
+            {uploadError ? (
+              <p className="mt-3 text-sm font-medium text-error">{uploadError}</p>
+            ) : null}
+            {stage.kind === "ready" && !busy ? (
+              <button
+                type="button"
+                className="mt-6 w-full rounded-md bg-primary px-6 py-3 text-lg font-semibold text-white shadow-card"
+                onClick={onStart}
+              >
+                Start lesson
+              </button>
+            ) : null}
+            {runError ? <p className="mt-3 text-sm font-medium text-error">{runError}</p> : null}
+          </>
+        )}
 
-      {stage.kind === "working" && (
-        <div className="mt-8 rounded-md border border-border bg-surface p-10 text-center shadow-card">
-          <p className="font-medium">Working on your lesson…</p>
-          <p className="mt-1 text-sm text-text-muted">
-            This can take a moment. Ask the Lesson Coach if you have questions.
-          </p>
-        </div>
-      )}
+        {stage.kind === "working" && (
+          <div className="mt-8 rounded-md border border-border bg-surface p-10 text-center shadow-card">
+            <p className="font-medium">Working on your lesson...</p>
+            <p className="mt-1 text-sm text-text-muted">
+              This can take a moment. Ask the Lesson Coach if you have questions.
+            </p>
+          </div>
+        )}
 
-      {stage.kind === "plan" && (
-        <div className="mt-8">
-          <PlanApprovalCard plan={stage.interrupt.plan} onRespond={stage.interrupt.respond} />
-        </div>
-      )}
+        {stage.kind === "plan" && (
+          <div className="mt-8">
+            <PlanApprovalCard plan={stage.interrupt.plan} onRespond={stage.interrupt.respond} />
+          </div>
+        )}
 
-      {stage.kind === "question" && (
-        <div className="mt-8">
-          <McqWidget
-            stem={stage.interrupt.event.stem}
-            choices={stage.interrupt.event.choices}
-            questionIdx={stage.interrupt.event.questionIdx}
-            totalQuestions={stage.interrupt.event.totalQuestions}
-            {...(stage.interrupt.event.feedback
-              ? { feedback: stage.interrupt.event.feedback }
-              : {})}
-            onSubmit={(selectedIndex) =>
-              stage.interrupt.respond({ action: "submit", selectedIndex })
-            }
-            onContinue={() => stage.interrupt.respond({ action: "continue" })}
-          />
-        </div>
-      )}
+        {stage.kind === "question" && (
+          <div className="mt-8">
+            <McqWidget
+              stem={stage.interrupt.event.stem}
+              choices={stage.interrupt.event.choices}
+              questionIdx={stage.interrupt.event.questionIdx}
+              totalQuestions={stage.interrupt.event.totalQuestions}
+              {...(stage.interrupt.event.feedback
+                ? { feedback: stage.interrupt.event.feedback }
+                : {})}
+              onSubmit={(selectedIndex) =>
+                stage.interrupt.respond({ action: "submit", selectedIndex })
+              }
+              onContinue={() => stage.interrupt.respond({ action: "continue" })}
+            />
+          </div>
+        )}
 
-      {stage.kind === "report" && (
-        <div className="mt-8">
-          <ProgressReport report={stage.report} />
-        </div>
-      )}
+        {stage.kind === "report" && (
+          <div className="mt-8">
+            <ProgressReport report={stage.report} />
+          </div>
+        )}
 
-      {lessonId ? (
-        <button
-          type="button"
-          className="mt-3 text-sm text-text-muted underline"
-          onClick={() => {
-            clearSession();
-            window.location.reload();
-          }}
-        >
-          Start a new lesson
-        </button>
-      ) : null}
+        {lessonId ? (
+          <button
+            type="button"
+            className="mt-3 text-sm text-text-muted underline"
+            onClick={() => {
+              clearSession();
+              window.location.reload();
+            }}
+          >
+            Start a new lesson
+          </button>
+        ) : null}
+      </section>
 
-      <CopilotSidebar
-        labels={{
-          title: "Lesson Coach",
-          initial:
-            "I'm here for hints and support. Upload a PDF and hit Start lesson on the dashboard to begin.",
-        }}
+      <LessonCoachPanel
+        lessonId={lessonId}
+        activeQuestion={activeQuestion ? toGuardrailReadable(activeQuestion) : null}
       />
+      <CopilotInterruptBridge />
     </main>
   );
 }
