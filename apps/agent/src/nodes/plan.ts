@@ -1,11 +1,8 @@
 import { LessonPlanSchema, type LessonPlan } from "@lessonbuild/shared";
 import { saveObjectives, getLesson } from "@lessonbuild/db";
 import { getModel } from "../model.js";
+import { PLAN_SYSTEM } from "../prompts.js";
 import type { LessonStateType } from "../state.js";
-
-const SYSTEM = `You are an expert instructional designer. Read the document and propose a
-concise learning plan: 3-6 objectives ordered from foundational to advanced, each with a
-title, difficulty, and one-sentence description. Base everything strictly on the document.`;
 
 /**
  * Accepts the plan either at the top level or nested one key deep — some models
@@ -50,7 +47,7 @@ export async function planNode(
     includeRaw: true,
   });
   const messages: { role: "system" | "user"; content: string }[] = [
-    { role: "system", content: SYSTEM },
+    { role: "system", content: PLAN_SYSTEM },
     { role: "user", content: `Document:\n\n${docText}` },
   ];
   if (state.planFeedback && state.lessonPlan) {

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { McqSchema, type Mcq, type SafeMcq } from "@lessonbuild/shared";
 import { retrieveLessonContext, saveQuestion } from "@lessonbuild/db";
 import { getModel } from "../model.js";
+import { QUESTIONS_SYSTEM } from "../prompts.js";
 import type { LessonStateType } from "../state.js";
 
 /** The single-call output: one batch per *selected* objective, sized per its count. */
@@ -65,13 +66,6 @@ function toSafeMcq(q: Mcq): SafeMcq {
   return { stem: q.stem, choices: q.choices, hint: q.hint };
 }
 
-const SYSTEM = `For EACH learning objective listed, write the requested number of
-multiple-choice questions (4 choices each) that test that objective, based strictly on
-the document. Each objective states how many questions it needs. Return one entry per
-objective, in the same order as listed. For every question provide the correct index,
-a short explanation of why it is correct, and a conceptual hint that does NOT reveal
-the answer.`;
-
 export async function generateQuestionsNode(
   state: LessonStateType,
   model = getModel(),
@@ -118,7 +112,7 @@ export async function generateQuestionsNode(
     })
     .join("\n\n");
   const messages: { role: "system" | "user"; content: string }[] = [
-    { role: "system", content: SYSTEM },
+    { role: "system", content: QUESTIONS_SYSTEM },
     {
       role: "user",
       content: `Objectives:\n${objectiveList}\n\nRetrieved document context:\n${retrievedContext}`,
