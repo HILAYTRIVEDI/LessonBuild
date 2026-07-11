@@ -78,9 +78,9 @@ describe("lesson data access", () => {
       ],
     });
 
-    await expect(
-      retrieveLessonContext({ lessonId, queryText: "zzzzzz", limit: 1 }),
-    ).resolves.toBe("Alpha opening context.");
+    await expect(retrieveLessonContext({ lessonId, queryText: "zzzzzz", limit: 1 })).resolves.toBe(
+      "Alpha opening context.",
+    );
   });
 
   it("returns the answer key for a saved question by id", async () => {
