@@ -11,7 +11,10 @@ export async function hydrateNode(state: LessonStateType): Promise<Partial<Lesso
   // Idempotent: if a prior turn already loaded the text, don't re-fetch.
   if (state.docText.length > 0) return {};
 
-  const lessonId = state.lessonId.trim();
+  // state.lessonId is typed as string, but it originates from client-sent
+  // JSON (CopilotKit thread state) which can desync from that type at
+  // runtime — guard rather than trust the annotation.
+  const lessonId = typeof state.lessonId === "string" ? state.lessonId.trim() : "";
   if (!lessonId) {
     throw new Error("hydrate: missing lessonId — upload a PDF before starting the lesson.");
   }

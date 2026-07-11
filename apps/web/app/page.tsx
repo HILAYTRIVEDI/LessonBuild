@@ -132,8 +132,15 @@ export default function Home() {
   }
 
   function onStart() {
+    if (!lessonId) return;
     setRunError(null);
     setStarting(true);
+    // runAgent reads agent.state directly, not the useCoAgent hook copy —
+    // setAgentState updates may not have propagated to it yet, so sync
+    // explicitly via the agent's own setState (direct assignment to the
+    // hook-returned object is disallowed) to avoid sending a stale/null
+    // lessonId to the server.
+    agent.setState({ ...agent.state, lessonId, report: agentState.report ?? null });
     void copilotkit
       .runAgent({ agent })
       .catch(() => {
