@@ -10,6 +10,11 @@ import { evaluateNode, routeAfterEvaluate } from "./nodes/evaluate.js";
 import { advanceNode, routeAfterAdvance } from "./nodes/advance.js";
 import { summarizeNode } from "./nodes/summarize.js";
 
+/**
+ * Builds the lesson graph with one human approval loop and one MCQ answer loop.
+ * A checkpointer is optional for unit tests, but production passes Postgres so
+ * CopilotKit interrupts can resume the same thread.
+ */
 export function buildGraph(checkpointer?: BaseCheckpointSaver) {
   const workflow = new StateGraph(LessonState)
     .addNode("hydrate", (state) => hydrateNode(state))
@@ -45,11 +50,12 @@ export function buildGraph(checkpointer?: BaseCheckpointSaver) {
   return workflow.compile(checkpointer ? { checkpointer } : undefined);
 }
 
-// Exported for langgraph.json / CopilotKit runtime. Uses Postgres checkpointer when available.
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 let _checkpointer: PostgresSaver | undefined;
 const databaseUrl = process.env["DATABASE_URL"];
 if (databaseUrl) {
   _checkpointer = PostgresSaver.fromConnString(databaseUrl);
 }
+
+/** Export consumed by langgraph.json and CopilotKit runtime. */
 export const graph = buildGraph(_checkpointer);

@@ -3,6 +3,11 @@ import { useState } from "react";
 import type { CoachMessage, CoachQuestionContext } from "@/lib/coach";
 import { CoachResponseSchema } from "@/lib/coach";
 
+/**
+ * Separate chat panel for conceptual help. It sends browser-safe active
+ * question context to the server, which retrieves PDF evidence and enforces
+ * the no-answer guardrail.
+ */
 export function LessonCoachPanel({
   lessonId,
   activeQuestion,
@@ -32,6 +37,10 @@ export function LessonCoachPanel({
     setSending(true);
 
     try {
+      /*
+       * Send only the last few turns; the server validates the payload and
+       * adds retrieved lesson context before it reaches the model.
+       */
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

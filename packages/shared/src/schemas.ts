@@ -1,18 +1,25 @@
 import { z } from "zod";
 
+/** Difficulty labels shared by plan generation, UI, and persistence. */
 export const DifficultySchema = z.enum(["beginner", "intermediate", "advanced"]);
 
+/** One teachable objective proposed from the uploaded document. */
 export const ObjectiveSchema = z.object({
   title: z.string().min(1),
   difficulty: DifficultySchema,
   description: z.string().min(1),
 });
 
+/** Human-reviewable lesson plan produced before any questions are generated. */
 export const LessonPlanSchema = z.object({
   overallDifficulty: DifficultySchema,
   objectives: z.array(ObjectiveSchema).min(1).max(8),
 });
 
+/**
+ * Full MCQ contract used at trusted boundaries. It contains the answer key and
+ * must be persisted server-side before browser-visible state is sanitized.
+ */
 export const McqSchema = z
   .object({
     stem: z.string().min(1),
@@ -35,11 +42,13 @@ export const SafeMcqSchema = z.object({
   hint: z.string().min(1),
 });
 
+/** Interrupt payload sent when the graph needs plan approval or revision. */
 export const ApprovePlanEventSchema = z.object({
   type: z.literal("approve_plan"),
   plan: LessonPlanSchema.nullable(),
 });
 
+/** Resume payload accepted from the plan approval card. */
 export const ApprovePlanResponseSchema = z.object({
   approved: z.boolean(),
   // Learner's change request when approved is false; fed back into the planner.
@@ -58,6 +67,7 @@ export const AskQuestionFeedbackSchema = z.object({
   text: z.string(),
 });
 
+/** Interrupt payload sent when the learner must answer or continue an MCQ. */
 export const AskQuestionEventSchema = z.object({
   type: z.literal("ask_mcq"),
   stem: z.string(),
@@ -67,20 +77,24 @@ export const AskQuestionEventSchema = z.object({
   feedback: AskQuestionFeedbackSchema.optional(),
 });
 
+/** Resume payload for a quiz option submission. */
 export const SubmitAnswerResponseSchema = z.object({
   action: z.literal("submit"),
   selectedIndex: z.number().int().nonnegative(),
 });
 
+/** Resume payload after the learner acknowledges correct-answer feedback. */
 export const ContinueQuestionResponseSchema = z.object({
   action: z.literal("continue"),
 });
 
+/** All valid learner responses to an active MCQ interrupt. */
 export const AskQuestionResponseSchema = z.discriminatedUnion("action", [
   SubmitAnswerResponseSchema,
   ContinueQuestionResponseSchema,
 ]);
 
+/** All interrupt events the dashboard knows how to render. */
 export const LessonInterruptEventSchema = z.discriminatedUnion("type", [
   ApprovePlanEventSchema,
   AskQuestionEventSchema,

@@ -1,16 +1,22 @@
 const DEFAULT_CHUNK_CHARS = 6_000;
 const DEFAULT_OVERLAP_CHARS = 600;
 
+/** Ordered text slice used for retrieval after PDF upload. */
 export interface TextChunk {
   ord: number;
   content: string;
 }
 
+/** Tunables for chunk size and overlap during source-text indexing. */
 export interface ChunkTextOptions {
   chunkChars?: number;
   overlapChars?: number;
 }
 
+/**
+ * Splits normalized PDF text into overlapping chunks, preferring sentence or
+ * paragraph boundaries near the target size when possible.
+ */
 export function chunkText(text: string, options: ChunkTextOptions = {}): TextChunk[] {
   const chunkChars = options.chunkChars ?? DEFAULT_CHUNK_CHARS;
   const overlapChars = options.overlapChars ?? DEFAULT_OVERLAP_CHARS;

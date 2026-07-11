@@ -1,16 +1,23 @@
 import type { Objective, Mcq } from "@lessonbuild/shared";
 import { pool, query } from "./client";
 
+/** Persistable chunk of extracted lesson text, ordered for deterministic retrieval. */
 export interface LessonChunkInput {
   ord: number;
   content: string;
 }
 
+/** Stored lesson chunk returned to retrieval and coaching callers. */
 export interface LessonChunk {
   ord: number;
   content: string;
 }
 
+/**
+ * Creates the lesson record and its searchable chunks in one transaction.
+ * The full document stays in `lessons.doc_text`; chunks support smaller
+ * retrieval windows for coach and generation prompts.
+ */
 export async function createLesson(input: {
   title: string;
   sourceFilename: string;
@@ -41,6 +48,7 @@ export async function createLesson(input: {
   }
 }
 
+/** Loads the canonical document text for an uploaded lesson. */
 export async function getLesson(
   id: string,
 ): Promise<{ id: string; docText: string; title: string } | null> {
@@ -52,6 +60,7 @@ export async function getLesson(
   return { id: rows[0]!.id, docText: rows[0]!.doc_text, title: rows[0]!.title };
 }
 
+/** Returns lesson chunks in their source order for deterministic prompt assembly. */
 export async function getLessonChunks(lessonId: string): Promise<LessonChunk[]> {
   const { rows } = await query<{ ord: number; content: string }>(
     `SELECT ord, content FROM lesson_chunks WHERE lesson_id = $1 ORDER BY ord`,
@@ -60,6 +69,11 @@ export async function getLessonChunks(lessonId: string): Promise<LessonChunk[]> 
   return rows.map((row) => ({ ord: row.ord, content: row.content }));
 }
 
+/**
+ * Retrieves a small context window for a lesson using Postgres full-text rank.
+ * If no chunk matches the query, it falls back to the first chunks so callers
+ * still get source-grounded context instead of an empty prompt.
+ */
 export async function retrieveLessonContext(input: {
   lessonId: string;
   queryText: string;
@@ -100,6 +114,7 @@ export async function retrieveLessonContext(input: {
   return rows.map((row) => row.content).join("\n\n");
 }
 
+/** Saves approved objectives in display order and returns their database ids. */
 export async function saveObjectives(lessonId: string, objectives: Objective[]): Promise<string[]> {
   const ids: string[] = [];
   for (let i = 0; i < objectives.length; i++) {
@@ -114,6 +129,10 @@ export async function saveObjectives(lessonId: string, objectives: Objective[]):
   return ids;
 }
 
+/**
+ * Persists a full MCQ, including answer key and explanation. Browser-visible
+ * graph state only receives the sanitized shape from the agent.
+ */
 export async function saveQuestion(objectiveId: string, q: Mcq): Promise<string> {
   const { rows } = await query<{ id: string }>(
     `INSERT INTO questions (objective_id, stem, choices, correct_index, explanation, hint)
@@ -123,6 +142,7 @@ export async function saveQuestion(objectiveId: string, q: Mcq): Promise<string>
   return rows[0]!.id;
 }
 
+/** Records one learner attempt for a question, preserving retry order. */
 export async function recordAttempt(input: {
   questionId: string;
   selectedIndex: number;
@@ -136,6 +156,7 @@ export async function recordAttempt(input: {
   );
 }
 
+/** Returns attempts joined to objective titles for progress-report scoring. */
 export async function getAttempts(
   lessonId: string,
 ): Promise<{ objectiveTitle: string; isCorrect: boolean; attemptNo: number }[]> {

@@ -6,6 +6,7 @@ import { LESSON_KEY } from "@/lib/session";
 
 const LessonIdSchema = z.string().uuid();
 
+/** CopilotKit runtime proxy needs Node APIs for LangGraph networking. */
 export const runtime = "nodejs";
 
 const runtimeInstance = new CopilotRuntime({
@@ -130,6 +131,10 @@ async function withSelectedLesson(req: NextRequest): Promise<Request> {
   });
 }
 
+/**
+ * Proxies CopilotKit requests to LangGraph after threading the selected lesson
+ * id into every request shape the runtime may inspect.
+ */
 export const POST = async (req: NextRequest) => {
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     runtime: runtimeInstance,

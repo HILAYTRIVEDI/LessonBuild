@@ -3,6 +3,10 @@ import { ApprovePlanResponseSchema } from "@lessonbuild/shared";
 import type { ApprovePlanEvent } from "@lessonbuild/shared";
 import type { LessonStateType } from "../state.js";
 
+/**
+ * Interrupts for human approval and normalizes the approved per-objective
+ * question counts before generation.
+ */
 export async function approvePlanNode(state: LessonStateType): Promise<Partial<LessonStateType>> {
   // The resume payload crosses the CopilotKit boundary untyped, so the
   // interrupt's response generic is a lie at runtime — parse before trusting.
@@ -28,11 +32,11 @@ export async function approvePlanNode(state: LessonStateType): Promise<Partial<L
   return {
     planApproved: true,
     planFeedback: null,
-    questionCounts:
-      response.questionCounts ?? Array.from({ length: objectiveCount }, () => 2),
+    questionCounts: response.questionCounts ?? Array.from({ length: objectiveCount }, () => 2),
   };
 }
 
+/** Replans on learner feedback; otherwise proceeds to MCQ generation. */
 export function routeAfterApprove(state: LessonStateType): "plan" | "generateQuestions" {
   return state.planApproved ? "generateQuestions" : "plan";
 }

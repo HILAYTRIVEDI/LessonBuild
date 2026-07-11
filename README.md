@@ -33,11 +33,13 @@ that never reveal the answer), and closes with a personalized progress report.
 ```
 
 - **`apps/web`** — Next.js app. Upload route extracts PDF text, CopilotKit sidebar drives the
-  conversational lesson experience, and React components render the plan approval card, MCQ
-  widget, and progress report.
+  conversational lesson experience, `/api/coach` powers the guardrailed Lesson Coach, and React
+  components render the plan approval card, MCQ widget, coach panel, and progress report.
 - **`apps/agent`** — LangGraph.js agent graph. Each node (`plan`, `approvePlan`,
   `generateQuestions`, `askQuestion`, `evaluate`, `advance`, `summarize`) is a discrete step in
   the lesson loop, with human-in-the-loop interrupts for plan approval and question answering.
+  Approved plans can specify a per-objective MCQ count, including `0` for topics that should stay
+  in the lesson but be skipped during quiz generation.
 - **`packages/db`** — Postgres access layer (lessons, objectives, questions, attempts).
 - **`packages/shared`** — Zod schemas shared between the agent and the web app (lesson plan,
   MCQ, etc.).
@@ -86,13 +88,14 @@ pnpm --filter web dev              # Next.js dev server on :3000
 1. **Upload** — drop a PDF (see `samples/`) on the homepage. Its text is extracted and a
    lesson record is created.
 2. **Plan proposal** — the agent reads the document and proposes a set of learning objectives.
-   Nothing proceeds until you **approve the plan** in the approval card (human-in-the-loop).
+   Nothing proceeds until you **approve the plan** in the approval card (human-in-the-loop). You
+   can include or skip each topic and choose how many MCQs to generate per included topic.
 3. **Questions** — the agent generates multiple-choice questions per objective, grounded in the
-   uploaded document.
+   uploaded document and sized from the approved per-topic counts.
 4. **Answer** — pick a choice. An incorrect answer shows a **red** highlight, an explanation,
-   and a hint, then lets you retry with no penalty. You can also ask the assistant for help —
-   it will give conceptual hints but is guardrailed to never reveal the correct choice while a
-   question is active.
+   and a hint, then lets you retry with no penalty. The separate **Lesson Coach** panel can explain
+   concepts, clarify vocabulary, or give hints from retrieved PDF context, but is guardrailed to
+   never reveal the correct choice while a question is active.
 5. **Correct answer** — shows a **green** highlight and explanation, then advances to the next
    question or objective.
 6. **Progress report** — once every objective is complete, the agent produces a report with

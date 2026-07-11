@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { AskQuestionFeedback } from "@lessonbuild/shared";
 import { formatProgress } from "@/lib/progress";
 
+/** Displays one active MCQ interrupt and emits submit/continue actions. */
 export function McqWidget({
   stem,
   choices,

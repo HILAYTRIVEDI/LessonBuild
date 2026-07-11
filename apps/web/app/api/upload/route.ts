@@ -3,6 +3,7 @@ import { extractText } from "@/lib/pdf";
 import { chunkText } from "@/lib/textChunks";
 import { createLesson } from "@lessonbuild/db";
 
+/** Upload parsing needs Node APIs for PDF extraction and database writes. */
 export const runtime = "nodejs";
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -34,6 +35,10 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
   }
 }
 
+/**
+ * Accepts a PDF upload, extracts text, stores the lesson plus retrieval chunks,
+ * and returns the lesson id that seeds the agent thread state.
+ */
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
