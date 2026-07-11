@@ -139,7 +139,7 @@ describe("generateQuestionsNode", () => {
   });
 
   it("skips zero-count topics entirely — no retrieval, no prompt entry, correct id mapping", async () => {
-    const invoke = vi.fn(async (_messages: { content: string }[]) => ({
+    const invoke = vi.fn<(messages: { content: string }[]) => Promise<unknown>>(async () => ({
       parsed: { objectives: [{ questions: [qB, qB] }] },
       raw: {},
     }));
