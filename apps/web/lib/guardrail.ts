@@ -1,6 +1,10 @@
 import type { AskQuestionEvent } from "@lessonbuild/shared";
 
-/** System guidance injected when chat help is requested during an active MCQ. */
+/**
+ * Canonical never-reveal rule for chat help during an active MCQ. Composed into
+ * COACH_SYSTEM_PROMPT (see lib/coach.ts) so the runtime prompt and this helper
+ * share one source of truth.
+ */
 export const HINT_GUARDRAIL_INSTRUCTIONS =
   "While a question is active, you may offer conceptual hints or explain related concepts, " +
   "but you must NEVER reveal which choice is correct or its index. Always steer the learner " +

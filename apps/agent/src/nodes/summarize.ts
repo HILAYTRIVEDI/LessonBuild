@@ -1,4 +1,5 @@
 import { getModel } from "../model.js";
+import { SUMMARY_SYSTEM } from "../prompts.js";
 import type { LessonStateType, AttemptRecord } from "../state.js";
 
 export function computeScore(attempts: AttemptRecord[]) {
@@ -24,8 +25,7 @@ export async function summarizeNode(
   const tips = await model.invoke([
     {
       role: "system",
-      content:
-        "You are a supportive study coach. Given the learner's per-question attempt history, write 3 short, specific, encouraging study tips. Do not reveal any answer keys.",
+      content: SUMMARY_SYSTEM,
     },
     {
       role: "user",

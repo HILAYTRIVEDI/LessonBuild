@@ -97,8 +97,14 @@ describe("ApprovePlanResponseSchema", () => {
     expect(ApprovePlanResponseSchema.parse({ approved: true })).toEqual({ approved: true });
   });
   it("rejects counts outside 0-5 or non-integers", () => {
-    expect(() => ApprovePlanResponseSchema.parse({ approved: true, questionCounts: [6] })).toThrow();
-    expect(() => ApprovePlanResponseSchema.parse({ approved: true, questionCounts: [-1] })).toThrow();
-    expect(() => ApprovePlanResponseSchema.parse({ approved: true, questionCounts: [1.5] })).toThrow();
+    expect(() =>
+      ApprovePlanResponseSchema.parse({ approved: true, questionCounts: [6] }),
+    ).toThrow();
+    expect(() =>
+      ApprovePlanResponseSchema.parse({ approved: true, questionCounts: [-1] }),
+    ).toThrow();
+    expect(() =>
+      ApprovePlanResponseSchema.parse({ approved: true, questionCounts: [1.5] }),
+    ).toThrow();
   });
 });
