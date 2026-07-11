@@ -4,12 +4,23 @@ import { retrieveLessonContext, saveQuestion } from "@lessonbuild/db";
 import { getModel } from "../model.js";
 import type { LessonStateType } from "../state.js";
 
-const ObjectiveBatchSchema = z.object({ questions: z.array(McqSchema).length(2) });
-
-/** The single-call output: one 2-question batch per plan objective, in order. */
-function buildBatchSchema(objectiveCount: number) {
+/** The single-call output: one batch per *selected* objective, sized per its count. */
+function buildBatchSchema(counts: number[]) {
   return z.object({
-    objectives: z.array(ObjectiveBatchSchema).length(objectiveCount),
+    objectives: z
+      .array(z.object({ questions: z.array(McqSchema).min(1).max(5) }))
+      .length(counts.length)
+      .superRefine((batches, ctx) => {
+        batches.forEach((batch, i) => {
+          if (batch.questions.length !== counts[i]) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `objective ${i + 1} must have exactly ${counts[i]} questions`,
+              path: [i, "questions"],
+            });
+          }
+        });
+      }),
   });
 }
 
@@ -54,36 +65,53 @@ function toSafeMcq(q: Mcq): SafeMcq {
   return { stem: q.stem, choices: q.choices, hint: q.hint };
 }
 
-const SYSTEM = `For EACH learning objective listed, write 2 multiple-choice questions
-(4 choices each) that test that objective, based strictly on the document. Return one
-entry per objective, in the same order as listed. For every question provide the correct
-index, a short explanation of why it is correct, and a conceptual hint that does NOT
-reveal the answer.`;
+const SYSTEM = `For EACH learning objective listed, write the requested number of
+multiple-choice questions (4 choices each) that test that objective, based strictly on
+the document. Each objective states how many questions it needs. Return one entry per
+objective, in the same order as listed. For every question provide the correct index,
+a short explanation of why it is correct, and a conceptual hint that does NOT reveal
+the answer.`;
 
 export async function generateQuestionsNode(
   state: LessonStateType,
   model = getModel(),
 ): Promise<Partial<LessonStateType>> {
   const objectives = state.lessonPlan!.objectives;
-  const schema = buildBatchSchema(objectives.length);
+  // Old checkpoints (and direct runs) may predate questionCounts — keep the
+  // historical 2-per-topic behavior for them.
+  const questionCounts = state.questionCounts ?? [];
+  const counts =
+    questionCounts.length === objectives.length ? questionCounts : objectives.map(() => 2);
+  // Zero-count topics stay in the plan but are excluded from generation;
+  // carrying objectiveId here keeps saved questions mapped to the right topic.
+  const selected = objectives
+    .map((objective, i) => ({ objective, objectiveId: state.objectiveIds[i]!, count: counts[i]! }))
+    .filter((entry) => entry.count > 0);
+  if (selected.length === 0) {
+    throw new Error("Select at least one topic to generate questions for.");
+  }
+  const schema = buildBatchSchema(selected.map((entry) => entry.count));
   const structured = model.withStructuredOutput(schema, {
     name: "questions",
     includeRaw: true,
   });
-  const objectiveList = objectives
-    .map((o, i) => `${i + 1}. ${o.title} — ${o.description}`)
+  const objectiveList = selected
+    .map(
+      (entry, i) =>
+        `${i + 1}. ${entry.objective.title} — ${entry.objective.description} (write ${entry.count} questions)`,
+    )
     .join("\n");
   const retrievedContexts = await Promise.all(
-    objectives.map((objective) =>
+    selected.map((entry) =>
       retrieveLessonContext({
         lessonId: state.lessonId,
-        queryText: `${objective.title} ${objective.description}`,
+        queryText: `${entry.objective.title} ${entry.objective.description}`,
       }),
     ),
   );
   const retrievedContext = retrievedContexts
     .map((context, index) => {
-      const objective = objectives[index]!;
+      const { objective } = selected[index]!;
       return context
         ? `Objective ${index + 1}: ${objective.title}\n${context}`
         : `Objective ${index + 1}: ${objective.title}\n${state.docText}`;
@@ -111,9 +139,8 @@ export async function generateQuestionsNode(
   const questions: SafeMcq[] = [];
   const questionIds: string[] = [];
   for (let i = 0; i < batch.objectives.length; i++) {
-    // Safe: the schema pins batch.objectives.length to objectives.length,
-    // and objectiveIds is saved 1:1 from the same approved plan's objectives.
-    const objectiveId = state.objectiveIds[i]!;
+    // Safe: buildBatchSchema pins batch.objectives.length to selected.length.
+    const { objectiveId } = selected[i]!;
     for (const q of batch.objectives[i]!.questions) {
       questionIds.push(await saveQuestion(objectiveId, q));
       questions.push(toSafeMcq(q));

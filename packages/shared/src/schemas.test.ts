@@ -5,6 +5,7 @@ import {
   SafeMcqSchema,
   AskQuestionEventSchema,
   AskQuestionResponseSchema,
+  ApprovePlanResponseSchema,
 } from "./schemas";
 
 describe("LessonPlanSchema", () => {
@@ -84,5 +85,20 @@ describe("AskQuestionResponseSchema", () => {
     expect(AskQuestionResponseSchema.parse({ action: "continue" })).toEqual({
       action: "continue",
     });
+  });
+});
+
+describe("ApprovePlanResponseSchema", () => {
+  it("accepts an approval with per-topic question counts", () => {
+    const r = { approved: true, questionCounts: [2, 0, 5] };
+    expect(ApprovePlanResponseSchema.parse(r)).toEqual(r);
+  });
+  it("accepts an approval without counts (legacy payload)", () => {
+    expect(ApprovePlanResponseSchema.parse({ approved: true })).toEqual({ approved: true });
+  });
+  it("rejects counts outside 0-5 or non-integers", () => {
+    expect(() => ApprovePlanResponseSchema.parse({ approved: true, questionCounts: [6] })).toThrow();
+    expect(() => ApprovePlanResponseSchema.parse({ approved: true, questionCounts: [-1] })).toThrow();
+    expect(() => ApprovePlanResponseSchema.parse({ approved: true, questionCounts: [1.5] })).toThrow();
   });
 });
