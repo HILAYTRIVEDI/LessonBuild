@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "pnpm --parallel --filter=./apps/web --filter=./apps/agent dev",
+    "dev:local": "bash scripts/dev.sh",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

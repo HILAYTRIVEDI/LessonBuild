@@ -176,35 +176,38 @@ Services:
 
 ## Local Development Without Full Docker
 
-Run Postgres only:
+One-time setup:
 
 ```bash
 pnpm install
 cp .env.example .env
 # Fill AIMLAPI_KEY in .env
-docker compose up postgres -d
+```
+
+Then a single command starts Postgres (waiting for it to be healthy), runs
+migrations, and launches the agent and web dev servers together:
+
+```bash
+pnpm dev:local
+```
+
+This runs `scripts/dev.sh`, which is equivalent to:
+
+```bash
+docker compose up postgres -d --wait
 pnpm --filter @lessonbuild/db migrate
+pnpm dev   # runs `pnpm --filter agent dev` and `pnpm --filter web dev` in parallel
 ```
 
-Start the agent and web app in separate terminals:
-
-```bash
-pnpm --filter agent dev
-```
-
-```bash
-pnpm --filter web dev
-```
-
-Open `http://localhost:3000`.
-
-The agent dev server runs on `http://localhost:2024` with `--no-browser`.
+Open `http://localhost:3000`. The agent dev server runs on `http://localhost:2024`
+with `--no-browser`.
 
 ## Root Scripts
 
 | Command             | Description                                                                       |
 | ------------------- | --------------------------------------------------------------------------------- |
 | `pnpm dev`          | Runs web and agent dev servers in parallel                                        |
+| `pnpm dev:local`    | Starts Postgres, runs migrations, then runs `pnpm dev` — single-command non-Docker setup |
 | `pnpm test`         | Runs all Vitest suites, including DB integration tests when Postgres is reachable |
 | `pnpm lint`         | Runs ESLint across the monorepo                                                   |
 | `pnpm format`       | Formats the repo with Prettier                                                    |
