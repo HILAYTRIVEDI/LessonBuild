@@ -196,6 +196,16 @@ export async function getAttempts(
 }
 
 /**
+ * Questions are immutable once saved, so the answer key for a question id
+ * never goes stale. Evaluate and feedback both look up the same question in
+ * one turn, and retries repeat the lookup — cache like retrieval context.
+ */
+const answerCache = new LRUCache<string, { correctIndex: number; explanation: string }>({
+  max: 500,
+  ttl: 10 * 60 * 1000,
+});
+
+/**
  * Answer-key lookup for the agent's deterministic evaluate/feedback path.
  * The key lives only in Postgres — never in graph state, which CopilotKit
  * streams to the browser.
@@ -203,6 +213,9 @@ export async function getAttempts(
 export async function getQuestionAnswer(
   questionId: string,
 ): Promise<{ correctIndex: number; explanation: string }> {
+  const cached = answerCache.get(questionId);
+  if (cached !== undefined) return cached;
+
   const { rows } = await query<{ correct_index: number; explanation: string }>(
     `SELECT correct_index, explanation FROM questions WHERE id = $1`,
     [questionId],
@@ -210,5 +223,7 @@ export async function getQuestionAnswer(
   if (rows.length === 0) {
     throw new Error(`getQuestionAnswer: question "${questionId}" not found`);
   }
-  return { correctIndex: rows[0]!.correct_index, explanation: rows[0]!.explanation };
+  const answer = { correctIndex: rows[0]!.correct_index, explanation: rows[0]!.explanation };
+  answerCache.set(questionId, answer);
+  return answer;
 }

@@ -118,6 +118,29 @@ describe("lesson data access", () => {
     expect(answer).toEqual({ correctIndex: 2, explanation: "because c" });
   });
 
+  it("caches the answer key and skips the DB on a repeated lookup", async () => {
+    const lessonId = await createLesson({ title: "T3", sourceFilename: "t.pdf", docText: "x" });
+    const [objId] = await saveObjectives(lessonId, [
+      { title: "O1", difficulty: "beginner", description: "d" },
+    ]);
+    const qId = await saveQuestion(objId as string, {
+      stem: "Q",
+      choices: ["a", "b"],
+      correctIndex: 0,
+      explanation: "because a",
+      hint: "h",
+    });
+
+    const first = await getQuestionAnswer(qId);
+    const querySpy = vi.spyOn(client, "query");
+    const second = await getQuestionAnswer(qId);
+
+    expect(second).toEqual(first);
+    expect(querySpy).not.toHaveBeenCalled();
+
+    querySpy.mockRestore();
+  });
+
   it("throws for an unknown question id", async () => {
     await expect(getQuestionAnswer("00000000-0000-0000-0000-000000000000")).rejects.toThrow(
       /not found/,
