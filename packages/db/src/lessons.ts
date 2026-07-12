@@ -1,4 +1,5 @@
 import type { Objective, Mcq } from "@lessonbuild/shared";
+import { LRUCache } from "lru-cache";
 import { getPool, query } from "./client";
 
 /** Persistable chunk of extracted lesson text, ordered for deterministic retrieval. */
@@ -70,9 +71,17 @@ export async function getLessonChunks(lessonId: string): Promise<LessonChunk[]> 
 }
 
 /**
+ * Lesson chunks are immutable once created, so retrieval results for a given
+ * lesson/query/limit never go stale. TTL is a safety net, not a correctness
+ * requirement.
+ */
+const retrievalCache = new LRUCache<string, string>({ max: 500, ttl: 10 * 60 * 1000 });
+
+/**
  * Retrieves a small context window for a lesson using Postgres full-text rank.
  * If no chunk matches the query, it falls back to the first chunks so callers
- * still get source-grounded context instead of an empty prompt.
+ * still get source-grounded context instead of an empty prompt. Results are
+ * cached since coach turns repeatedly query the same lesson/question context.
  */
 export async function retrieveLessonContext(input: {
   lessonId: string;
@@ -81,6 +90,10 @@ export async function retrieveLessonContext(input: {
 }): Promise<string> {
   const limit = input.limit ?? 4;
   if (limit <= 0) throw new Error("retrieveLessonContext: limit must be positive");
+
+  const cacheKey = `${input.lessonId}::${input.queryText}::${limit}`;
+  const cached = retrievalCache.get(cacheKey);
+  if (cached !== undefined) return cached;
 
   const { rows } = await query<{ content: string }>(
     `WITH ranked AS (
@@ -111,7 +124,9 @@ export async function retrieveLessonContext(input: {
      ORDER BY result_ord`,
     [input.lessonId, input.queryText, limit],
   );
-  return rows.map((row) => row.content).join("\n\n");
+  const context = rows.map((row) => row.content).join("\n\n");
+  retrievalCache.set(cacheKey, context);
+  return context;
 }
 
 /** Saves approved objectives in display order and returns their database ids. */

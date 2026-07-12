@@ -1,7 +1,8 @@
 // Requires a running Postgres locally (`docker compose up postgres -d`); CI has a postgres service.
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { runMigrations } from "./migrate";
 import { getPool } from "./client";
+import * as client from "./client";
 import {
   createLesson,
   getLessonChunks,
@@ -81,6 +82,24 @@ describe("lesson data access", () => {
     await expect(retrieveLessonContext({ lessonId, queryText: "zzzzzz", limit: 1 })).resolves.toBe(
       "Alpha opening context.",
     );
+  });
+
+  it("caches retrieval results and skips the DB on a repeated query", async () => {
+    const lessonId = await createLesson({
+      title: "Cached",
+      sourceFilename: "cached.pdf",
+      docText: "mitochondria text",
+      chunks: [{ ord: 0, content: "The mitochondria is the powerhouse of the cell." }],
+    });
+
+    const first = await retrieveLessonContext({ lessonId, queryText: "powerhouse", limit: 1 });
+    const querySpy = vi.spyOn(client, "query");
+    const second = await retrieveLessonContext({ lessonId, queryText: "powerhouse", limit: 1 });
+
+    expect(second).toBe(first);
+    expect(querySpy).not.toHaveBeenCalled();
+
+    querySpy.mockRestore();
   });
 
   it("returns the answer key for a saved question by id", async () => {
