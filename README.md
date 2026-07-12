@@ -72,6 +72,23 @@ packages/shared
 | `docker-compose.yml` | Local full-stack orchestration for Postgres, agent, and web                                                                       |
 | `.env.example`       | Required environment variable template                                                                                            |
 
+### Key Modules
+
+| Module                                  | Purpose                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| `apps/web/components/PlanApprovalCard.tsx` | Renders the human-in-the-loop plan approval interrupt UI                |
+| `apps/web/components/McqWidget.tsx`      | Renders the MCQ interrupt, retry/hint flow, and correct-answer explanation |
+| `apps/web/components/LessonCoachPanel.tsx` | Chat panel backed by `/api/coach`                                       |
+| `apps/web/components/ProgressReport.tsx` | Renders the final `summarize` progress report                          |
+| `apps/web/lib/pdf.ts`                    | PDF text extraction via `unpdf`                                        |
+| `apps/web/lib/textChunks.ts`             | Ordered overlapping chunking for retrieval                             |
+| `apps/web/lib/session.ts`                | LocalStorage/cookie handling for `lessonId`                            |
+| `apps/web/lib/stage.ts`                  | Client-side lesson stage state machine                                 |
+| `apps/web/lib/planSelection.ts`          | Per-topic selection and question-count logic for plan approval          |
+| `apps/web/lib/progress.ts`               | Progress report derivation from attempts                               |
+| `apps/web/lib/guardrail.ts`              | Coach no-answer-leak guardrail checks                                  |
+| `apps/web/lib/coach.ts`                  | Coach request/response schemas, system prompt, AI/ML API call shape    |
+
 ## Technology Stack
 
 - Runtime: Node.js 22+
@@ -126,7 +143,7 @@ and both app services talk to `postgres:5432`.
 ### Single source of truth for `.env`
 
 There is exactly one `.env` file — the one at the repo root. Docker Compose (`env_file: .env`)
-and the agent (`langgraph.json` → `"env": ".env"`) both read it directly.
+and the agent (`langgraph.json` → `"env": "../../.env"`) both read it directly.
 
 Next.js only loads `.env` from its own app directory, so local `pnpm --filter web dev` needs a
 `.env` inside `apps/web`. Rather than keep a second copy that can drift, symlink it to the root file:
@@ -302,6 +319,11 @@ pnpm test
 
 `pnpm test` includes DB integration coverage in `packages/db/src/lessons.test.ts`. That suite
 requires a reachable Postgres instance at the configured `DATABASE_URL`.
+
+### Continuous Integration
+
+`.github/workflows/ci.yml` runs on every push and pull request to `main`: install with a frozen
+lockfile, `pnpm lint`, `pnpm format:check`, then `pnpm test`.
 
 ## Troubleshooting
 
