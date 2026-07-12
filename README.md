@@ -1,9 +1,9 @@
 # LessonBuild
 
-LessonBuild turns an uploaded PDF into an interactive, AI-guided lesson. It extracts the
-source text, proposes a human-reviewed learning plan, lets the learner choose which topics to
-quiz and how many questions to generate, runs a guardrailed MCQ practice loop, provides a
-separate Lesson Coach for hints, and closes with a personalized progress report.
+LessonBuild turns an uploaded PDF into an interactive, AI-guided lesson. It extracts source text,
+proposes a human-reviewed learning plan, lets the learner choose which topics to quiz and how many
+questions to generate, runs an MCQ practice loop, provides a separate Lesson Coach for hints, and
+closes with a personalized progress report.
 
 The application is intentionally scoped as a demo-ready learning workflow. It prioritizes
 source-grounded generation, human-in-the-loop plan approval, answer-key safety, and a clean
@@ -22,7 +22,7 @@ local development path.
 - Browser-safe question state that excludes `correctIndex` and answer explanations.
 - Retry flow for incorrect answers with hint feedback.
 - Correct-answer flow with explanation after the learner answers correctly.
-- Lesson Coach panel backed by `/api/coach`, retrieved PDF context, and no-answer guardrails.
+- Lesson Coach panel backed by `/api/coach`, retrieved PDF context, and no-answer prompt guardrails.
 - CopilotKit runtime proxy for LangGraph interrupts and checkpointed thread state.
 - Docker Compose setup for Postgres, agent, and web services.
 - Unit tests for web helpers, shared schemas, and agent graph nodes.
@@ -72,23 +72,6 @@ packages/shared
 | `docker-compose.yml` | Local full-stack orchestration for Postgres, agent, and web                                                                       |
 | `.env.example`       | Required environment variable template                                                                                            |
 
-### Key Modules
-
-| Module                                     | Purpose                                                                    |
-| ------------------------------------------ | -------------------------------------------------------------------------- |
-| `apps/web/components/PlanApprovalCard.tsx` | Renders the human-in-the-loop plan approval interrupt UI                   |
-| `apps/web/components/McqWidget.tsx`        | Renders the MCQ interrupt, retry/hint flow, and correct-answer explanation |
-| `apps/web/components/LessonCoachPanel.tsx` | Chat panel backed by `/api/coach`                                          |
-| `apps/web/components/ProgressReport.tsx`   | Renders the final `summarize` progress report                              |
-| `apps/web/lib/pdf.ts`                      | PDF text extraction via `unpdf`                                            |
-| `apps/web/lib/textChunks.ts`               | Ordered overlapping chunking for retrieval                                 |
-| `apps/web/lib/session.ts`                  | LocalStorage/cookie handling for `lessonId`                                |
-| `apps/web/lib/stage.ts`                    | Client-side lesson stage state machine                                     |
-| `apps/web/lib/planSelection.ts`            | Per-topic selection and question-count logic for plan approval             |
-| `apps/web/lib/progress.ts`                 | Progress report derivation from attempts                                   |
-| `apps/web/lib/guardrail.ts`                | Coach no-answer-leak guardrail checks                                      |
-| `apps/web/lib/coach.ts`                    | Coach request/response schemas, system prompt, AI/ML API call shape        |
-
 ## Technology Stack
 
 - Runtime: Node.js 22+
@@ -120,7 +103,7 @@ cp .env.example .env
 | Variable            | Required       | Used by                | Description                                                    |
 | ------------------- | -------------- | ---------------------- | -------------------------------------------------------------- |
 | `AIMLAPI_KEY`       | Yes            | web, agent             | API key for AI/ML API model calls                              |
-| `LLM_MODEL`         | Yes            | web, agent             | Model name, defaults in code to `claude-sonnet-5` when missing |
+| `LLM_MODEL`         | No             | web, agent             | Model name, defaults in code to `claude-sonnet-5` when missing |
 | `POSTGRES_USER`     | Yes for Docker | docker-compose         | Postgres user for the local container                          |
 | `POSTGRES_PASSWORD` | Yes for Docker | docker-compose         | Postgres password for the local container                      |
 | `POSTGRES_DB`       | Yes for Docker | docker-compose         | Postgres database name                                         |
@@ -130,15 +113,16 @@ cp .env.example .env
 | `HOST`              | No             | agent                  | Agent server bind host, defaults in code to `0.0.0.0`          |
 | `N_WORKERS`         | No             | agent                  | Agent worker count, defaults in code to `10`                   |
 
-Local default:
+When using the Docker Compose Postgres service from host-run commands, use the host-mapped port:
 
 ```bash
-DATABASE_URL=postgresql://lessonbuild:lessonbuild@localhost:5432/lessonbuild
+DATABASE_URL=postgresql://lessonbuild:lessonbuild@localhost:5433/lessonbuild
 LANGGRAPH_URL=http://localhost:2024
 ```
 
 Docker Compose overrides service-to-service URLs internally so `web` talks to `agent:2024`
-and both app services talk to `postgres:5432`.
+and both app services talk to `postgres:5432`. If you run your own Postgres directly on the host,
+use that server's port in `DATABASE_URL`.
 
 ### Single source of truth for `.env`
 
@@ -170,7 +154,7 @@ Services:
 
 | Service    | Port   | Notes                                            |
 | ---------- | ------ | ------------------------------------------------ |
-| `postgres` | `5432` | Postgres 16 with persistent `pgdata` volume      |
+| `postgres` | `5433` | Host port; container port is `5432`              |
 | `agent`    | `2024` | LangGraph API server, runs migrations on startup |
 | `web`      | `3000` | Next.js app                                      |
 
@@ -182,6 +166,7 @@ One-time setup:
 pnpm install
 cp .env.example .env
 # Fill AIMLAPI_KEY in .env
+# Set DATABASE_URL to postgresql://lessonbuild:lessonbuild@localhost:5433/lessonbuild
 ```
 
 Then a single command starts Postgres (waiting for it to be healthy), runs
@@ -249,12 +234,12 @@ with `--no-browser`.
 
 ## API Routes
 
-| Route             | Method | Runtime | Purpose                                                                                        |
-| ----------------- | ------ | ------- | ---------------------------------------------------------------------------------------------- |
-| `/api/upload`     | `POST` | Node.js | Accepts one PDF file, extracts text, stores lesson and chunks, returns `lessonId`              |
-| `/api/copilotkit` | `POST` | Node.js | Proxies CopilotKit traffic to LangGraph and injects selected lesson state                      |
-| `/api/coach`      | `POST` | Node.js | Validates coach chat input, retrieves lesson context, calls AI/ML API, returns a checked reply |
-| `/api/health`     | `GET`  | Node.js | Returns `{ "ok": true }` for health checks                                                     |
+| Route             | Method | Runtime | Purpose                                                                                               |
+| ----------------- | ------ | ------- | ----------------------------------------------------------------------------------------------------- |
+| `/api/upload`     | `POST` | Node.js | Accepts one PDF file, extracts text, stores lesson and chunks, returns `lessonId`                     |
+| `/api/copilotkit` | `POST` | Node.js | Proxies CopilotKit traffic to LangGraph and injects selected lesson state                             |
+| `/api/coach`      | `POST` | Node.js | Validates coach chat input, retrieves lesson context, calls AI/ML API, returns a schema-checked reply |
+| `/api/health`     | `GET`  | Node.js | Returns `{ "ok": true }` for health checks                                                            |
 
 Upload constraints:
 
@@ -298,7 +283,7 @@ Important safety boundary:
 - The CopilotKit route treats the lesson cookie as attacker-controlled and only accepts UUIDs.
 - The active answer key is never sent to the browser.
 - Lesson Coach may provide conceptual help, hints, and vocabulary explanations.
-- Lesson Coach must not reveal the correct option, correct index, or eliminate choices one by one.
+- Lesson Coach is instructed not to reveal the correct option, correct index, or eliminate choices one by one.
 - LLM outputs are parsed through structured Zod schemas before use.
 
 ## Testing And Verification
@@ -316,6 +301,7 @@ Full validation:
 
 ```bash
 docker compose up postgres -d
+export DATABASE_URL=postgresql://lessonbuild:lessonbuild@localhost:5433/lessonbuild
 pnpm --filter @lessonbuild/db migrate
 pnpm test
 ```
@@ -332,10 +318,12 @@ lockfile, `pnpm lint`, `pnpm format:check`, then `pnpm test`.
 
 ### `pnpm test` fails with `ECONNREFUSED 127.0.0.1:5432`
 
-Postgres is not running or `DATABASE_URL` points to the wrong host.
+Postgres is not running or `DATABASE_URL` points to the wrong host/port. The Compose Postgres
+service is available from the host on port `5433`.
 
 ```bash
 docker compose up postgres -d
+export DATABASE_URL=postgresql://lessonbuild:lessonbuild@localhost:5433/lessonbuild
 pnpm --filter @lessonbuild/db migrate
 pnpm test
 ```
@@ -363,16 +351,6 @@ Check `AIMLAPI_KEY`, `LLM_MODEL`, and network access from the web runtime.
 
 The PDF parsed successfully but did not yield text. Try a text-based PDF instead of a scanned
 image-only document.
-
-## Development Standards
-
-- Keep TypeScript strict.
-- Prefer `unknown` plus runtime narrowing over `any`.
-- Parse untrusted inputs with Zod.
-- Keep cross-package imports through package entrypoints.
-- Keep answer keys out of browser-visible state.
-- Do not introduce gradients in the UI.
-- Keep comments focused on contracts, non-obvious behavior, and safety boundaries.
 
 ## Known Scope
 
