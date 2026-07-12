@@ -26,6 +26,15 @@ done
 
 docker compose up postgres -d --wait
 
+cleanup() {
+  status=$?
+  echo "Stopping local Postgres container..." >&2
+  docker compose stop postgres >/dev/null 2>&1 || true
+  exit "$status"
+}
+
+trap cleanup EXIT INT TERM
+
 # packages/db reads DATABASE_URL from process.env directly (no dotenv loading),
 # so it must be exported into the shell before running the migrate script.
 set -a
@@ -34,4 +43,4 @@ set +a
 
 pnpm --filter @lessonbuild/db migrate
 
-exec pnpm dev
+pnpm dev
