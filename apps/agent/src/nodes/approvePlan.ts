@@ -6,10 +6,15 @@ import type { LessonStateType } from "../state.js";
 /**
  * Interrupts for human approval and normalizes the approved per-objective
  * question counts before generation.
+ *
+ * @param state Current lesson graph state containing the proposed plan.
+ * @return Partial state with approval status, feedback, and question counts.
  */
 export async function approvePlanNode(state: LessonStateType): Promise<Partial<LessonStateType>> {
-  // The resume payload crosses the CopilotKit boundary untyped, so the
-  // interrupt's response generic is a lie at runtime — parse before trusting.
+  /**
+   * The resume payload crosses the CopilotKit boundary untyped, so the
+   * interrupt's response generic is a lie at runtime — parse before trusting.
+   */
   const resumed = interrupt<ApprovePlanEvent, unknown>({
     type: "approve_plan",
     plan: state.lessonPlan,
@@ -36,7 +41,12 @@ export async function approvePlanNode(state: LessonStateType): Promise<Partial<L
   };
 }
 
-/** Replans on learner feedback; otherwise proceeds to MCQ generation. */
+/**
+ * Replans on learner feedback; otherwise proceeds to MCQ generation.
+ *
+ * @param state Current lesson graph state after plan approval.
+ * @return Next graph node name.
+ */
 export function routeAfterApprove(state: LessonStateType): "plan" | "generateQuestions" {
   return state.planApproved ? "generateQuestions" : "plan";
 }

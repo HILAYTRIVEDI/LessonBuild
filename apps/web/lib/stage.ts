@@ -26,6 +26,9 @@ export type DashboardStage =
  * Priority: a pending interrupt always needs the learner's input first; the
  * report is shown as soon as it streams in (the run may still be finalizing);
  * otherwise working > ready > upload.
+ *
+ * @param input Raw dashboard state signals from React and CopilotKit.
+ * @return The single dashboard stage to render.
  */
 export function deriveStage(input: {
   lessonId: string | null;

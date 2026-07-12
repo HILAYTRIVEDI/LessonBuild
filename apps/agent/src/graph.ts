@@ -15,6 +15,9 @@ import { summarizeNode } from "./nodes/summarize.js";
  * Builds the lesson graph with one human approval loop and one MCQ answer loop.
  * A checkpointer is optional for unit tests, but production passes Postgres so
  * CopilotKit interrupts can resume the same thread.
+ *
+ * @param checkpointer Optional LangGraph checkpoint saver for resumable runs.
+ * @return Compiled lesson graph.
  */
 export function buildGraph(checkpointer?: BaseCheckpointSaver) {
   const workflow = new StateGraph(LessonState)
@@ -41,8 +44,6 @@ export function buildGraph(checkpointer?: BaseCheckpointSaver) {
     .addConditionalEdges("evaluate", routeAfterEvaluate, {
       askQuestion: "askQuestion",
     })
-    // Generation runs exactly once, right after plan approval — advance only
-    // walks the pre-generated global question list.
     .addConditionalEdges("advance", routeAfterAdvance, {
       askQuestion: "askQuestion",
       summarize: "summarize",

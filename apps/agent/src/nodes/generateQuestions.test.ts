@@ -1,23 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { retrieveLessonContext, saveQuestion } from "@lessonbuild/db";
+import { retrieveLessonContext, saveQuestion, getLesson } from "@lessonbuild/db";
 import { generateQuestionsNode } from "./generateQuestions";
 
 vi.mock("@lessonbuild/db", () => ({
   retrieveLessonContext: vi.fn(async () => "retrieved context"),
   saveQuestion: vi.fn(async (objectiveId: string) => `q-${objectiveId}`),
+  getLesson: vi.fn(async () => ({ id: "L1", docText: "full doc from db", title: "T" })),
 }));
 
 beforeEach(() => {
   vi.mocked(retrieveLessonContext).mockClear();
   vi.mocked(retrieveLessonContext).mockResolvedValue("retrieved context");
   vi.mocked(saveQuestion).mockClear();
+  vi.mocked(getLesson).mockClear();
 });
 
 const qA = { stem: "QA", choices: ["a", "b", "c"], correctIndex: 1, explanation: "eA", hint: "hA" };
 const qB = { stem: "QB", choices: ["a", "b", "c"], correctIndex: 0, explanation: "eB", hint: "hB" };
 
 const baseState = {
-  docText: "t",
   lessonId: "L1",
   objectiveIds: ["obj-1", "obj-2"],
   lessonPlan: {
@@ -72,7 +73,7 @@ describe("generateQuestionsNode", () => {
     );
   });
 
-  it("falls back to state docText when no chunks are available", async () => {
+  it("falls back to the DB document when no chunks are available, loading it once", async () => {
     vi.mocked(retrieveLessonContext).mockResolvedValue("");
     const invoke = vi.fn(async () => ({ parsed: validBatch, raw: {} }));
     const model = { withStructuredOutput: () => ({ invoke }) };
@@ -80,9 +81,19 @@ describe("generateQuestionsNode", () => {
 
     expect(invoke).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.objectContaining({ content: expect.stringContaining("Objective 1: A\nt") }),
+        expect.objectContaining({
+          content: expect.stringContaining("Objective 1: A\nfull doc from db"),
+        }),
       ]),
     );
+    // One fetch covers every objective that needed the fallback.
+    expect(vi.mocked(getLesson)).toHaveBeenCalledTimes(1);
+  });
+
+  it("never touches the DB document when retrieval finds chunks", async () => {
+    const model = modelReturning({ parsed: validBatch, raw: {} });
+    await generateQuestionsNode(baseState as never, model as never);
+    expect(vi.mocked(getLesson)).not.toHaveBeenCalled();
   });
 
   it("returns sanitized questions — no correctIndex or explanation in state", async () => {

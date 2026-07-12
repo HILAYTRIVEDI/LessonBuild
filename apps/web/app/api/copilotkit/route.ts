@@ -86,8 +86,6 @@ function withGraphqlLessonState(
 }
 
 async function withSelectedLesson(req: NextRequest): Promise<Request> {
-  // The cookie is attacker-controlled input — only forward it into agent
-  // state when it looks like a lesson id we could have minted.
   const cookie = LessonIdSchema.safeParse(req.cookies.get(LESSON_KEY)?.value);
   if (!cookie.success) return req;
   const lessonId = cookie.data;
@@ -116,9 +114,6 @@ async function withSelectedLesson(req: NextRequest): Promise<Request> {
     };
   }
 
-  // Some LangGraph clients merge agent state from top-level `input` and not the
-  // nested `state` object. Mirror the lesson id there as well so hydrate never
-  // misses it.
   nextBody = withTopLevelLessonId(nextBody, lessonId);
 
   const headers = new Headers(req.headers);
@@ -134,6 +129,9 @@ async function withSelectedLesson(req: NextRequest): Promise<Request> {
 /**
  * Proxies CopilotKit requests to LangGraph after threading the selected lesson
  * id into every request shape the runtime may inspect.
+ *
+ * @param req CopilotKit runtime request from the browser.
+ * @return Proxied CopilotKit response from LangGraph.
  */
 export const POST = async (req: NextRequest) => {
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({

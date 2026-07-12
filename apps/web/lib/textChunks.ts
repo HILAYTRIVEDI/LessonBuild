@@ -16,6 +16,10 @@ export interface ChunkTextOptions {
 /**
  * Splits normalized PDF text into overlapping chunks, preferring sentence or
  * paragraph boundaries near the target size when possible.
+ *
+ * @param text Source text extracted from the uploaded PDF.
+ * @param options Optional chunk and overlap size overrides.
+ * @return Ordered, overlapping chunks for retrieval.
  */
 export function chunkText(text: string, options: ChunkTextOptions = {}): TextChunk[] {
   const chunkChars = options.chunkChars ?? DEFAULT_CHUNK_CHARS;

@@ -32,6 +32,7 @@ describe("toGuardrailReadable", () => {
       stem: "What is 2+2?",
       choices: ["3", "4"],
       questionIdx: 0,
+      totalQuestions: 1,
     };
     const readable = toGuardrailReadable(event);
     expect(readable.priorHint).toBeUndefined();

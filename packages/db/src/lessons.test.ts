@@ -1,7 +1,8 @@
 // Requires a running Postgres locally (`docker compose up postgres -d`); CI has a postgres service.
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { runMigrations } from "./migrate";
 import { getPool } from "./client";
+import * as client from "./client";
 import {
   createLesson,
   getLessonChunks,
@@ -67,6 +68,26 @@ describe("lesson data access", () => {
     ).resolves.toBe("Cellular respiration releases stored energy.");
   });
 
+  it("preserves chunk order and objective ids for larger batches", async () => {
+    const chunks = Array.from({ length: 25 }, (_, i) => ({ ord: i, content: `chunk number ${i}` }));
+    const lessonId = await createLesson({
+      title: "Big",
+      sourceFilename: "big.pdf",
+      docText: "big doc",
+      chunks,
+    });
+    expect(await getLessonChunks(lessonId)).toEqual(chunks);
+
+    const objectives = Array.from({ length: 5 }, (_, i) => ({
+      title: `O${i}`,
+      difficulty: "beginner" as const,
+      description: `d${i}`,
+    }));
+    const ids = await saveObjectives(lessonId, objectives);
+    expect(ids).toHaveLength(5);
+    expect(new Set(ids).size).toBe(5);
+  });
+
   it("falls back to leading chunks when retrieval has no lexical match", async () => {
     const lessonId = await createLesson({
       title: "Fallback",
@@ -83,6 +104,24 @@ describe("lesson data access", () => {
     );
   });
 
+  it("caches retrieval results and skips the DB on a repeated query", async () => {
+    const lessonId = await createLesson({
+      title: "Cached",
+      sourceFilename: "cached.pdf",
+      docText: "mitochondria text",
+      chunks: [{ ord: 0, content: "The mitochondria is the powerhouse of the cell." }],
+    });
+
+    const first = await retrieveLessonContext({ lessonId, queryText: "powerhouse", limit: 1 });
+    const querySpy = vi.spyOn(client, "query");
+    const second = await retrieveLessonContext({ lessonId, queryText: "powerhouse", limit: 1 });
+
+    expect(second).toBe(first);
+    expect(querySpy).not.toHaveBeenCalled();
+
+    querySpy.mockRestore();
+  });
+
   it("returns the answer key for a saved question by id", async () => {
     const lessonId = await createLesson({ title: "T2", sourceFilename: "t.pdf", docText: "x" });
     const [objId] = await saveObjectives(lessonId, [
@@ -97,6 +136,29 @@ describe("lesson data access", () => {
     });
     const answer = await getQuestionAnswer(qId);
     expect(answer).toEqual({ correctIndex: 2, explanation: "because c" });
+  });
+
+  it("caches the answer key and skips the DB on a repeated lookup", async () => {
+    const lessonId = await createLesson({ title: "T3", sourceFilename: "t.pdf", docText: "x" });
+    const [objId] = await saveObjectives(lessonId, [
+      { title: "O1", difficulty: "beginner", description: "d" },
+    ]);
+    const qId = await saveQuestion(objId as string, {
+      stem: "Q",
+      choices: ["a", "b"],
+      correctIndex: 0,
+      explanation: "because a",
+      hint: "h",
+    });
+
+    const first = await getQuestionAnswer(qId);
+    const querySpy = vi.spyOn(client, "query");
+    const second = await getQuestionAnswer(qId);
+
+    expect(second).toEqual(first);
+    expect(querySpy).not.toHaveBeenCalled();
+
+    querySpy.mockRestore();
   });
 
   it("throws for an unknown question id", async () => {

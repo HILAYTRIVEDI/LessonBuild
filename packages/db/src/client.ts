@@ -14,7 +14,14 @@ export function getPool(): pg.Pool {
     if (!connectionString) {
       throw new Error("DATABASE_URL is not set");
     }
-    pool = new pg.Pool({ connectionString });
+    pool = new pg.Pool({
+      connectionString,
+      // pg defaults to max 10 with an unbounded connect wait; a burst of
+      // concurrent requests would queue silently. PGPOOL_MAX allows tuning
+      // per deployment without a code change.
+      max: Number(process.env["PGPOOL_MAX"] ?? 20),
+      connectionTimeoutMillis: 5_000,
+    });
   }
   return pool;
 }

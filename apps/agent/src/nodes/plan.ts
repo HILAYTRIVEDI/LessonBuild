@@ -5,8 +5,11 @@ import { PLAN_SYSTEM } from "../prompts.js";
 import type { LessonStateType } from "../state.js";
 
 /**
- * Accepts the plan either at the top level or nested one key deep — some models
+ * Accepts the plan either at the top level or nested one key deep; some models
  * wrap the tool arguments in an extra object (e.g. `{ "objectives": { ...plan } }`).
+ *
+ * @param value Raw model output or tool arguments.
+ * @return Parsed lesson plan, or null when the shape is invalid.
  */
 function coerceLessonPlan(value: unknown): LessonPlan | null {
   const direct = LessonPlanSchema.safeParse(value);
@@ -29,6 +32,13 @@ function rawToolArgs(raw: unknown): unknown {
   return (first as { args: unknown }).args;
 }
 
+/**
+ * Generates or revises the lesson plan from the source document.
+ *
+ * @param state Current lesson graph state with lesson id and optional feedback.
+ * @param model Chat model used for structured plan generation.
+ * @return Partial state containing the lesson plan and objective ids.
+ */
 export async function planNode(
   state: LessonStateType,
   model = getModel(),
@@ -36,12 +46,10 @@ export async function planNode(
   if (!state.lessonId) {
     throw new Error("No lesson selected yet — upload a PDF before starting the lesson.");
   }
-  let docText = state.docText;
-  if (!docText) {
-    const lesson = await getLesson(state.lessonId);
-    if (!lesson) throw new Error(`Lesson ${state.lessonId} not found.`);
-    docText = lesson.docText;
-  }
+
+  const lesson = await getLesson(state.lessonId);
+  if (!lesson) throw new Error(`Lesson ${state.lessonId} not found.`);
+  const docText = lesson.docText;
   const structured = model.withStructuredOutput(LessonPlanSchema, {
     name: "lesson_plan",
     includeRaw: true,
@@ -65,5 +73,5 @@ export async function planNode(
     throw new Error("The model did not return a valid lesson plan. Please try again.");
   }
   const objectiveIds = await saveObjectives(state.lessonId, lessonPlan.objectives);
-  return { lessonPlan, objectiveIds, docText, planFeedback: null };
+  return { lessonPlan, objectiveIds, planFeedback: null };
 }
