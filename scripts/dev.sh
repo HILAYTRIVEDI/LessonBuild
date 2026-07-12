@@ -13,6 +13,17 @@ if [ ! -e apps/web/.env ]; then
   ln -s ../../.env apps/web/.env
 fi
 
+# langgraphjs (agent) and next (web) can leave orphaned listeners behind after
+# a previous dev.sh was killed (e.g. Ctrl+C not reaping forked workers), which
+# then blocks the next run with EADDRINUSE. Clear known dev ports first.
+for port in 3000 2024; do
+  pid=$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+  if [ -n "$pid" ]; then
+    echo "Port $port in use by PID $pid from a previous run — killing it." >&2
+    kill $pid 2>/dev/null || true
+  fi
+done
+
 docker compose up postgres -d --wait
 
 # packages/db reads DATABASE_URL from process.env directly (no dotenv loading),
