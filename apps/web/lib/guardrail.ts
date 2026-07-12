@@ -18,11 +18,11 @@ export interface GuardrailReadable {
 }
 
 /**
-- Converts an active MCQ interrupt into coach context without answer keys or
-- correct-answer explanations.
--
-- @param event Active MCQ interrupt event from the lesson graph.
-- @return Browser-safe question context for the Lesson Coach.
+ * Converts an active MCQ interrupt into coach context without answer keys or
+ * correct-answer explanations.
+ *
+ * @param event Active MCQ interrupt event from the lesson graph.
+ * @return Browser-safe question context for the Lesson Coach.
  */
 export function toGuardrailReadable(event: AskQuestionEvent): GuardrailReadable {
   return {
