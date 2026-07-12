@@ -62,6 +62,22 @@ export const COACH_SYSTEM_PROMPT = [
   "Keep responses concise and grounded in the source material.",
 ].join(" ");
 
+/**
+- Retrieval cache key: the per-turn learner message would give every turn a
+- unique key and defeat the LRU in retrieveLessonContext. The active question
+- stem is stable across a whole question's coaching exchange, so retrieval
+- caches hit; the message is only used when no question is active.
+-
+- @param input Active question context (if any) and the learner's message.
+- @return Stable query text for lesson-context retrieval.
+ */
+export function buildRetrievalQuery(input: {
+  activeQuestion: CoachQuestionContext | null;
+  message: string;
+}): string {
+  return input.activeQuestion?.stem ?? input.message;
+}
+
 function formatQuestion(question: CoachQuestionContext | null): string {
   if (!question) return "No active question.";
   const choices = question.choices.map((choice, index) => `${index + 1}. ${choice}`).join("\n");
@@ -75,6 +91,12 @@ function formatQuestion(question: CoachQuestionContext | null): string {
     .join("\n");
 }
 
+/**
+- Builds the final user message sent to the coach model.
+-
+- @param input Retrieved lesson context, active question context, and learner text.
+- @return Sectioned prompt content for the coach model.
+ */
 export function buildCoachUserContext(input: {
   lessonContext: string;
   activeQuestion: CoachQuestionContext | null;

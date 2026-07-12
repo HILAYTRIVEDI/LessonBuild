@@ -74,20 +74,20 @@ packages/shared
 
 ### Key Modules
 
-| Module                                  | Purpose                                                                 |
-| ---------------------------------------- | ------------------------------------------------------------------------ |
-| `apps/web/components/PlanApprovalCard.tsx` | Renders the human-in-the-loop plan approval interrupt UI                |
-| `apps/web/components/McqWidget.tsx`      | Renders the MCQ interrupt, retry/hint flow, and correct-answer explanation |
-| `apps/web/components/LessonCoachPanel.tsx` | Chat panel backed by `/api/coach`                                       |
-| `apps/web/components/ProgressReport.tsx` | Renders the final `summarize` progress report                          |
-| `apps/web/lib/pdf.ts`                    | PDF text extraction via `unpdf`                                        |
-| `apps/web/lib/textChunks.ts`             | Ordered overlapping chunking for retrieval                             |
-| `apps/web/lib/session.ts`                | LocalStorage/cookie handling for `lessonId`                            |
-| `apps/web/lib/stage.ts`                  | Client-side lesson stage state machine                                 |
-| `apps/web/lib/planSelection.ts`          | Per-topic selection and question-count logic for plan approval          |
-| `apps/web/lib/progress.ts`               | Progress report derivation from attempts                               |
-| `apps/web/lib/guardrail.ts`              | Coach no-answer-leak guardrail checks                                  |
-| `apps/web/lib/coach.ts`                  | Coach request/response schemas, system prompt, AI/ML API call shape    |
+| Module                                     | Purpose                                                                    |
+| ------------------------------------------ | -------------------------------------------------------------------------- |
+| `apps/web/components/PlanApprovalCard.tsx` | Renders the human-in-the-loop plan approval interrupt UI                   |
+| `apps/web/components/McqWidget.tsx`        | Renders the MCQ interrupt, retry/hint flow, and correct-answer explanation |
+| `apps/web/components/LessonCoachPanel.tsx` | Chat panel backed by `/api/coach`                                          |
+| `apps/web/components/ProgressReport.tsx`   | Renders the final `summarize` progress report                              |
+| `apps/web/lib/pdf.ts`                      | PDF text extraction via `unpdf`                                            |
+| `apps/web/lib/textChunks.ts`               | Ordered overlapping chunking for retrieval                                 |
+| `apps/web/lib/session.ts`                  | LocalStorage/cookie handling for `lessonId`                                |
+| `apps/web/lib/stage.ts`                    | Client-side lesson stage state machine                                     |
+| `apps/web/lib/planSelection.ts`            | Per-topic selection and question-count logic for plan approval             |
+| `apps/web/lib/progress.ts`                 | Progress report derivation from attempts                                   |
+| `apps/web/lib/guardrail.ts`                | Coach no-answer-leak guardrail checks                                      |
+| `apps/web/lib/coach.ts`                    | Coach request/response schemas, system prompt, AI/ML API call shape        |
 
 ## Technology Stack
 
@@ -204,14 +204,14 @@ with `--no-browser`.
 
 ## Root Scripts
 
-| Command             | Description                                                                       |
-| ------------------- | --------------------------------------------------------------------------------- |
-| `pnpm dev`          | Runs web and agent dev servers in parallel                                        |
+| Command             | Description                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------- |
+| `pnpm dev`          | Runs web and agent dev servers in parallel                                               |
 | `pnpm dev:local`    | Starts Postgres, runs migrations, then runs `pnpm dev` — single-command non-Docker setup |
-| `pnpm test`         | Runs all Vitest suites, including DB integration tests when Postgres is reachable |
-| `pnpm lint`         | Runs ESLint across the monorepo                                                   |
-| `pnpm format`       | Formats the repo with Prettier                                                    |
-| `pnpm format:check` | Checks formatting without writing                                                 |
+| `pnpm test`         | Runs all Vitest suites, including DB integration tests when Postgres is reachable        |
+| `pnpm lint`         | Runs ESLint across the monorepo                                                          |
+| `pnpm format`       | Formats the repo with Prettier                                                           |
+| `pnpm format:check` | Checks formatting without writing                                                        |
 
 ## Package Scripts
 

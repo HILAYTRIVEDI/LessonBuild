@@ -3,17 +3,18 @@ import type { LessonStateType } from "../state.js";
 
 /**
  * Entry node: the web app writes the uploaded PDF's text to Postgres and hands
- * the agent only the `lessonId`. Hydrate loads the source document from the DB
- * so `plan` (and every downstream node) works over the real text rather than the
- * empty-string default. DB is the single source of truth for the document.
+ * the agent only the `lessonId`. Hydrate validates that the lesson exists and
+ * has extracted text, but never copies the document into graph state — state is
+ * checkpointed per thread and streamed to the browser, so nodes that need the
+ * text (plan, generateQuestions fallback) read it from the DB instead.
+ *
+ * @param state Current lesson graph state.
+ * @return Empty partial state; this node only validates.
  */
 export async function hydrateNode(state: LessonStateType): Promise<Partial<LessonStateType>> {
-  // Idempotent: if a prior turn already loaded the text, don't re-fetch.
-  if (state.docText.length > 0) return {};
+  // Once a plan exists the lesson was already validated on a prior turn.
+  if (state.lessonPlan) return {};
 
-  // state.lessonId is typed as string, but it originates from client-sent
-  // JSON (CopilotKit thread state) which can desync from that type at
-  // runtime — guard rather than trust the annotation.
   const lessonId = typeof state.lessonId === "string" ? state.lessonId.trim() : "";
   if (!lessonId) {
     throw new Error("hydrate: missing lessonId — upload a PDF before starting the lesson.");
@@ -27,5 +28,5 @@ export async function hydrateNode(state: LessonStateType): Promise<Partial<Lesso
     throw new Error(`hydrate: lesson "${lessonId}" has no extracted text.`);
   }
 
-  return { docText: lesson.docText };
+  return {};
 }

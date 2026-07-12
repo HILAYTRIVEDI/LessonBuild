@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { planNode } from "./plan";
 
 const getLessonMock = vi.fn();
@@ -18,23 +18,33 @@ const model = {
   withStructuredOutput: () => ({ invoke: async () => ({ raw: {}, parsed: fakePlan }) }),
 };
 
+beforeEach(() => {
+  getLessonMock.mockReset();
+  getLessonMock.mockResolvedValue({ id: "L1", docText: "db text", title: "T" });
+});
+
 describe("planNode", () => {
   it("produces a validated lesson plan and persists objectives", async () => {
-    const out = await planNode({ docText: "some text", lessonId: "L1" } as never, model as never);
+    const out = await planNode({ lessonId: "L1" } as never, model as never);
     expect(out.lessonPlan).toEqual(fakePlan);
     expect(out.objectiveIds).toEqual(["obj-1", "obj-2"]);
   });
 
-  it("loads docText from the database when state has only a lessonId", async () => {
-    getLessonMock.mockResolvedValueOnce({ id: "L1", docText: "db text", title: "T" });
-    const out = await planNode({ docText: "", lessonId: "L1" } as never, model as never);
+  it("reads the document from the DB and keeps docText out of graph state", async () => {
+    const invoke = vi.fn(async () => ({ raw: {}, parsed: fakePlan }));
+    const spied = { withStructuredOutput: () => ({ invoke }) };
+    const out = await planNode({ lessonId: "L1" } as never, spied as never);
     expect(getLessonMock).toHaveBeenCalledWith("L1");
-    expect(out.lessonPlan).toEqual(fakePlan);
-    expect(out.docText).toBe("db text");
+    expect(invoke).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ content: expect.stringContaining("db text") }),
+      ]),
+    );
+    expect(out).not.toHaveProperty("docText");
   });
 
   it("throws a clear error when no lesson has been uploaded", async () => {
-    await expect(planNode({ docText: "", lessonId: "" } as never, model as never)).rejects.toThrow(
+    await expect(planNode({ lessonId: "" } as never, model as never)).rejects.toThrow(
       /upload a PDF/i,
     );
   });
@@ -48,7 +58,7 @@ describe("planNode", () => {
         }),
       }),
     };
-    const out = await planNode({ docText: "t", lessonId: "L1" } as never, wrapped as never);
+    const out = await planNode({ lessonId: "L1" } as never, wrapped as never);
     expect(out.lessonPlan).toEqual(fakePlan);
   });
 
@@ -58,16 +68,16 @@ describe("planNode", () => {
       parsed: null,
     }));
     const broken = { withStructuredOutput: () => ({ invoke }) };
-    await expect(
-      planNode({ docText: "t", lessonId: "L1" } as never, broken as never),
-    ).rejects.toThrow(/valid lesson plan/i);
+    await expect(planNode({ lessonId: "L1" } as never, broken as never)).rejects.toThrow(
+      /valid lesson plan/i,
+    );
     expect(invoke).toHaveBeenCalledTimes(2);
   });
 
   it("throws when the lessonId does not exist", async () => {
     getLessonMock.mockResolvedValueOnce(null);
-    await expect(
-      planNode({ docText: "", lessonId: "missing" } as never, model as never),
-    ).rejects.toThrow(/not found/i);
+    await expect(planNode({ lessonId: "missing" } as never, model as never)).rejects.toThrow(
+      /not found/i,
+    );
   });
 });

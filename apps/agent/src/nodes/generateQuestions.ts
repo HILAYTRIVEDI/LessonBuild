@@ -1,11 +1,16 @@
 import { z } from "zod";
 import { McqSchema, type Mcq, type SafeMcq } from "@lessonbuild/shared";
-import { retrieveLessonContext, saveQuestion } from "@lessonbuild/db";
+import { retrieveLessonContext, saveQuestion, getLesson } from "@lessonbuild/db";
 import { getModel } from "../model.js";
 import { QUESTIONS_SYSTEM } from "../prompts.js";
 import type { LessonStateType } from "../state.js";
 
-/** The single-call output: one batch per *selected* objective, sized per its count. */
+/**
+ * Builds the single-call output schema for selected objectives.
+ *
+ * @param counts Required MCQ count for each selected objective.
+ * @return Zod schema for the model's batched question output.
+ */
 function buildBatchSchema(counts: number[]) {
   return z.object({
     objectives: z
@@ -29,9 +34,13 @@ type BatchOutput = { objectives: { questions: Mcq[] }[] };
 
 /**
  * Accepts the batch at the top level, as a bare objectives array, or nested
- * one key deep — some models wrap the tool arguments in an extra object
+ * one key deep; some models wrap the tool arguments in an extra object
  * (e.g. `{ "questions": { "objectives": [...] } }`), which makes the strict
  * parser reject an otherwise valid output.
+ *
+ * @param value Raw model output or tool arguments.
+ * @param schema Expected batched question schema.
+ * @return Parsed batch output, or null when the shape is invalid.
  */
 function coerceBatch(
   value: unknown,
@@ -52,6 +61,12 @@ function coerceBatch(
   return null;
 }
 
+/**
+ * Extracts the raw tool arguments from a model output.
+ *
+ * @param raw Raw model output.
+ * @return Tool arguments or null if not found.
+ */
 function rawToolArgs(raw: unknown): unknown {
   if (typeof raw !== "object" || raw === null || !("tool_calls" in raw)) return null;
   const calls = (raw as { tool_calls: unknown }).tool_calls;
@@ -61,23 +76,31 @@ function rawToolArgs(raw: unknown): unknown {
   return (first as { args: unknown }).args;
 }
 
-/** State is streamed to the browser by CopilotKit — strip the answer key. */
+/**
+ * State is streamed to the browser by CopilotKit, so this strips the answer key.
+ *
+ * @param q Full MCQ persisted to the database.
+ * @return Browser-safe MCQ without correct index or explanation.
+ */
 function toSafeMcq(q: Mcq): SafeMcq {
   return { stem: q.stem, choices: q.choices, hint: q.hint };
 }
 
+/**
+ * Generates MCQs for approved objectives and persists the full answer-key rows.
+ *
+ * @param state Current lesson graph state with approved plan and question counts.
+ * @param model Chat model used for structured MCQ generation.
+ * @return Partial state containing browser-safe questions and database ids.
+ */
 export async function generateQuestionsNode(
   state: LessonStateType,
   model = getModel(),
 ): Promise<Partial<LessonStateType>> {
   const objectives = state.lessonPlan!.objectives;
-  // Old checkpoints (and direct runs) may predate questionCounts — keep the
-  // historical 2-per-topic behavior for them.
   const questionCounts = state.questionCounts ?? [];
   const counts =
     questionCounts.length === objectives.length ? questionCounts : objectives.map(() => 2);
-  // Zero-count topics stay in the plan but are excluded from generation;
-  // carrying objectiveId here keeps saved questions mapped to the right topic.
   const selected = objectives
     .map((objective, i) => ({ objective, objectiveId: state.objectiveIds[i]!, count: counts[i]! }))
     .filter((entry) => entry.count > 0);
@@ -103,14 +126,21 @@ export async function generateQuestionsNode(
       }),
     ),
   );
-  const retrievedContext = retrievedContexts
-    .map((context, index) => {
-      const { objective } = selected[index]!;
-      return context
-        ? `Objective ${index + 1}: ${objective.title}\n${context}`
-        : `Objective ${index + 1}: ${objective.title}\n${state.docText}`;
-    })
-    .join("\n\n");
+  // Fallback when a lesson has no indexed chunks: read the full document from
+  // the DB (it is not carried in graph state). Promise-memoized so several
+  // objectives falling back in the same run share a single fetch.
+  let fullDocPromise: Promise<string> | null = null;
+  const loadFullDoc = () =>
+    (fullDocPromise ??= getLesson(state.lessonId).then((lesson) => lesson?.docText ?? ""));
+  const retrievedContext = (
+    await Promise.all(
+      retrievedContexts.map(async (context, index) => {
+        const { objective } = selected[index]!;
+        const body = context || (await loadFullDoc());
+        return `Objective ${index + 1}: ${objective.title}\n${body}`;
+      }),
+    )
+  ).join("\n\n");
   const messages: { role: "system" | "user"; content: string }[] = [
     { role: "system", content: QUESTIONS_SYSTEM },
     {

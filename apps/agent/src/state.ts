@@ -4,8 +4,6 @@ import type { LessonPlan, SafeMcq } from "@lessonbuild/shared";
 
 /** Append-only attempt record mirrored from Postgres for routing and scoring. */
 export type AttemptRecord = {
-  // DB id of the question — a stable key independent of the learner's
-  // position, unlike currentQuestionIdx which moves as the quiz advances.
   questionId: string;
   selectedIndex: number;
   isCorrect: boolean;
@@ -17,17 +15,12 @@ export type AttemptRecord = {
  * be streamed to the browser, so answer keys and explanations remain in DB.
  */
 export const LessonState = Annotation.Root({
-  docText: Annotation<string>({ reducer: (_, n) => n, default: () => "" }),
   lessonId: Annotation<string>({ reducer: (_, n) => n, default: () => "" }),
   lessonPlan: Annotation<LessonPlan | null>({ reducer: (_, n) => n, default: () => null }),
   planApproved: Annotation<boolean>({ reducer: (_, n) => n, default: () => false }),
   planFeedback: Annotation<string | null>({ reducer: (_, n) => n, default: () => null }),
   objectiveIds: Annotation<string[]>({ reducer: (_, n) => n, default: () => [] }),
-  // Per-objective MCQ counts from the approved plan (0 = topic skipped).
-  // Same length as lessonPlan.objectives once the plan is approved.
   questionCounts: Annotation<number[]>({ reducer: (_, n) => n, default: () => [] }),
-  // Sanitized on purpose: CopilotKit streams this state to the browser, so it
-  // must never contain correctIndex/explanation. Full rows live in Postgres.
   questions: Annotation<SafeMcq[]>({ reducer: (_, n) => n, default: () => [] }),
   questionIds: Annotation<string[]>({ reducer: (_, n) => n, default: () => [] }),
   currentQuestionIdx: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),

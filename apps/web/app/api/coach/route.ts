@@ -6,6 +6,7 @@ import {
   CoachRequestSchema,
   CoachResponseSchema,
   buildCoachUserContext,
+  buildRetrievalQuery,
 } from "@/lib/coach";
 
 /** Lesson Coach needs Node APIs for DB retrieval and AI/ML API calls. */
@@ -22,8 +23,9 @@ async function parseRequest(req: Request): Promise<unknown> {
 async function loadLessonContext(lessonId: string | null, queryText: string): Promise<string> {
   if (!lessonId) return "";
   /*
-   * Retrieval is scoped to the active question plus the learner's message so
-   * the coach answers from nearby PDF evidence instead of the whole document.
+   * Retrieval is scoped to a stable query (the active question stem, or the
+   * learner message when no question is active) so the coach answers from
+   * nearby PDF evidence and repeat turns hit the retrieval LRU cache.
    */
   return retrieveLessonContext({ lessonId, queryText, limit: 4 });
 }
@@ -31,6 +33,9 @@ async function loadLessonContext(lessonId: string | null, queryText: string): Pr
 /**
  * Handles guardrailed coach chat turns by validating browser input, retrieving
  * lesson context, and returning a schema-checked model response.
+ *
+ * @param req JSON coach chat request from the browser.
+ * @return JSON response with the coach reply or an error.
  */
 export async function POST(req: Request) {
   const parsed = CoachRequestSchema.safeParse(await parseRequest(req));
@@ -46,7 +51,7 @@ export async function POST(req: Request) {
   const { message, lessonId, activeQuestion, history } = parsed.data;
   const lessonContext = await loadLessonContext(
     lessonId,
-    `${activeQuestion?.stem ?? ""}\n${message}`,
+    buildRetrievalQuery({ activeQuestion, message }),
   );
   /*
    * History is intentionally bounded by the request schema. The final user

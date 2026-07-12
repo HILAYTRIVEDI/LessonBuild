@@ -2,6 +2,12 @@ import { getModel } from "../model.js";
 import { SUMMARY_SYSTEM } from "../prompts.js";
 import type { LessonStateType, AttemptRecord } from "../state.js";
 
+/**
+ * Computes first-try correctness from recorded attempts.
+ *
+ * @param attempts Attempt records accumulated during the quiz.
+ * @return First-try score and attempted-question total.
+ */
 export function computeScore(attempts: AttemptRecord[]) {
   const byQuestion = new Map<string, AttemptRecord[]>();
   for (const a of attempts) {
@@ -12,11 +18,17 @@ export function computeScore(attempts: AttemptRecord[]) {
     const first = list.find((a) => a.attemptNo === 1);
     if (first?.isCorrect) firstTryCorrect++;
   }
-  // The flow guarantees every asked question gets at least one attempt, so
-  // the distinct attempted questions are exactly the questions covered.
+
   return { firstTryCorrect, total: byQuestion.size };
 }
 
+/**
+ * Builds the final learner progress report.
+ *
+ * @param state Current lesson graph state with objectives and attempts.
+ * @param model Chat model used to generate study tips.
+ * @return Partial state containing the final report.
+ */
 export async function summarizeNode(
   state: LessonStateType,
   model = getModel(),
