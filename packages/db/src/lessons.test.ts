@@ -68,6 +68,26 @@ describe("lesson data access", () => {
     ).resolves.toBe("Cellular respiration releases stored energy.");
   });
 
+  it("preserves chunk order and objective ids for larger batches", async () => {
+    const chunks = Array.from({ length: 25 }, (_, i) => ({ ord: i, content: `chunk number ${i}` }));
+    const lessonId = await createLesson({
+      title: "Big",
+      sourceFilename: "big.pdf",
+      docText: "big doc",
+      chunks,
+    });
+    expect(await getLessonChunks(lessonId)).toEqual(chunks);
+
+    const objectives = Array.from({ length: 5 }, (_, i) => ({
+      title: `O${i}`,
+      difficulty: "beginner" as const,
+      description: `d${i}`,
+    }));
+    const ids = await saveObjectives(lessonId, objectives);
+    expect(ids).toHaveLength(5);
+    expect(new Set(ids).size).toBe(5);
+  });
+
   it("falls back to leading chunks when retrieval has no lexical match", async () => {
     const lessonId = await createLesson({
       title: "Fallback",

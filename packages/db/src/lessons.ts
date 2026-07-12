@@ -33,10 +33,23 @@ export async function createLesson(input: {
       [input.title, input.sourceFilename, input.docText],
     );
     const lessonId = rows[0]!.id;
-    for (const chunk of input.chunks ?? []) {
+    // Multi-row inserts keep the transaction (and its pooled connection)
+    // short; per-row round-trips made large uploads hold a pool slot for
+    // the whole chunk list. Batched to stay under Postgres's parameter cap.
+    const chunks = input.chunks ?? [];
+    const BATCH_SIZE = 1000;
+    for (let start = 0; start < chunks.length; start += BATCH_SIZE) {
+      const batch = chunks.slice(start, start + BATCH_SIZE);
+      const params: unknown[] = [lessonId];
+      const valuesSql = batch
+        .map((chunk) => {
+          params.push(chunk.ord, chunk.content);
+          return `($1, $${params.length - 1}, $${params.length})`;
+        })
+        .join(", ");
       await client.query(
-        `INSERT INTO lesson_chunks (lesson_id, ord, content) VALUES ($1, $2, $3)`,
-        [lessonId, chunk.ord, chunk.content],
+        `INSERT INTO lesson_chunks (lesson_id, ord, content) VALUES ${valuesSql}`,
+        params,
       );
     }
     await client.query("COMMIT");
@@ -131,17 +144,23 @@ export async function retrieveLessonContext(input: {
 
 /** Saves approved objectives in display order and returns their database ids. */
 export async function saveObjectives(lessonId: string, objectives: Objective[]): Promise<string[]> {
-  const ids: string[] = [];
-  for (let i = 0; i < objectives.length; i++) {
-    const o = objectives[i]!;
-    const { rows } = await query<{ id: string }>(
-      `INSERT INTO objectives (lesson_id, ord, title, difficulty, description)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [lessonId, i, o.title, o.difficulty, o.description],
-    );
-    ids.push(rows[0]!.id);
-  }
-  return ids;
+  if (objectives.length === 0) return [];
+  const params: unknown[] = [lessonId];
+  const valuesSql = objectives
+    .map((o, i) => {
+      params.push(i, o.title, o.difficulty, o.description);
+      const base = params.length - 4;
+      return `($1, $${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
+    })
+    .join(", ");
+  // RETURNING row order is not guaranteed, so ids are re-sorted by ord to
+  // keep the caller's positional mapping between objectives and ids.
+  const { rows } = await query<{ id: string; ord: number }>(
+    `INSERT INTO objectives (lesson_id, ord, title, difficulty, description)
+     VALUES ${valuesSql} RETURNING id, ord`,
+    params,
+  );
+  return rows.sort((a, b) => a.ord - b.ord).map((row) => row.id);
 }
 
 /**

@@ -19,4 +19,12 @@ describe("getModel", () => {
   it("returns the same client instance across calls", () => {
     expect(getModel()).toBe(getModel());
   });
+
+  it("retries transient API failures and bounds request time", () => {
+    const model = getModel();
+    // ChatOpenAI hands maxRetries to its AsyncCaller rather than storing it.
+    const caller = model.caller as unknown as { maxRetries: number };
+    expect(caller.maxRetries).toBe(3);
+    expect(model.timeout).toBe(60_000);
+  });
 });

@@ -18,6 +18,12 @@ export function getModel() {
     apiKey,
     configuration: { baseURL: "https://api.aimlapi.com/v1" },
     temperature: 0.2,
+    // Under concurrent load the provider will rate-limit; retries with the
+    // SDK's exponential backoff absorb transient 429s/5xx instead of
+    // surfacing them to the learner. Timeout keeps a hung call from
+    // stalling a graph run indefinitely.
+    maxRetries: 3,
+    timeout: 60_000,
   });
   return model;
 }

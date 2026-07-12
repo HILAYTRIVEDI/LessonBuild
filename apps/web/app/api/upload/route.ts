@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractText } from "@/lib/pdf";
+import { createLimiter } from "@/lib/limit";
 import { chunkText } from "@/lib/textChunks";
 import { createLesson } from "@lessonbuild/db";
 
@@ -9,6 +10,10 @@ export const runtime = "nodejs";
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 const PARSE_TIMEOUT_MS = 20_000;
 const PDF_HEADER = "%PDF-";
+
+// PDF extraction is CPU-bound and runs on the server's event loop; unlimited
+// concurrent parses would stall every other request. Excess uploads queue.
+const limitParse = createLimiter(2);
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -61,7 +66,7 @@ export async function POST(req: NextRequest) {
       return errorResponse("file is not a valid PDF", 415);
     }
 
-    const docText = await withTimeout(extractText(data), PARSE_TIMEOUT_MS);
+    const docText = await limitParse(() => withTimeout(extractText(data), PARSE_TIMEOUT_MS));
     if (!docText) {
       return errorResponse("could not extract text", 422);
     }
