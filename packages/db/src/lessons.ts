@@ -1,5 +1,5 @@
 import type { Objective, Mcq } from "@lessonbuild/shared";
-import { pool, query } from "./client";
+import { getPool, query } from "./client";
 
 /** Persistable chunk of extracted lesson text, ordered for deterministic retrieval. */
 export interface LessonChunkInput {
@@ -24,7 +24,7 @@ export async function createLesson(input: {
   docText: string;
   chunks?: LessonChunkInput[];
 }): Promise<string> {
-  const client = await pool.connect();
+  const client = await getPool().connect();
   try {
     await client.query("BEGIN");
     const { rows } = await client.query<{ id: string }>(
