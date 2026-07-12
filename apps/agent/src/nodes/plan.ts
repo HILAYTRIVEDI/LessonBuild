@@ -46,7 +46,7 @@ export async function planNode(
   if (!state.lessonId) {
     throw new Error("No lesson selected yet — upload a PDF before starting the lesson.");
   }
-  
+
   const lesson = await getLesson(state.lessonId);
   if (!lesson) throw new Error(`Lesson ${state.lessonId} not found.`);
   const docText = lesson.docText;
