@@ -3,6 +3,7 @@ import { LessonCoachPanel } from "@/components/LessonCoachPanel";
 import { PlanApprovalCard } from "@/components/PlanApprovalCard";
 import { McqWidget } from "@/components/McqWidget";
 import { ProgressReport } from "@/components/ProgressReport";
+import { WorkflowInspector } from "@/components/WorkflowInspector";
 import { toGuardrailReadable } from "@/lib/guardrail";
 import { useLessonDashboard } from "@/lib/useLessonDashboard";
 
@@ -18,6 +19,7 @@ export default function Home() {
     start,
     upload,
     uploadError,
+    workflowEvents,
   } = useLessonDashboard();
 
   return (
@@ -96,6 +98,8 @@ export default function Home() {
             Start a new lesson
           </button>
         ) : null}
+
+        <WorkflowInspector events={workflowEvents} />
       </section>
 
       <LessonCoachPanel

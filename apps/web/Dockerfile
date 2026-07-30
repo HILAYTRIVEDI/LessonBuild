@@ -17,6 +17,7 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY . .
+RUN touch apps/web/.env
 RUN pnpm --filter web build          # next build with output:"standalone"
 
 FROM node:22-alpine AS runner

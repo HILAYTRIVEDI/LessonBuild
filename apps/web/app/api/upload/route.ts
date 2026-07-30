@@ -73,13 +73,36 @@ export async function POST(req: NextRequest) {
     }
 
     const title = file.name.replace(/\.pdf$/i, "");
+    const chunks = chunkText(docText);
     const lessonId = await createLesson({
       title,
       sourceFilename: file.name,
       docText,
-      chunks: chunkText(docText),
+      chunks,
     });
-    return NextResponse.json({ lessonId, title });
+    return NextResponse.json({
+      lessonId,
+      title,
+      workflow: {
+        filename: file.name,
+        title,
+        sizeBytes: file.size,
+        mimeType: file.type || "application/pdf",
+        extractedCharacters: docText.length,
+        chunkCount: chunks.length,
+        database: {
+          lessonTable: "lessons",
+          chunkTable: "lesson_chunks",
+          lessonId,
+        },
+        functions: {
+          uploadHandler: "apps/web/app/api/upload/route.ts POST(req)",
+          pdfExtractor: "apps/web/lib/pdf.ts extractText(data)",
+          chunker: "apps/web/lib/textChunks.ts chunkText(docText)",
+          persistence: "packages/db/src/lessons.ts createLesson(input)",
+        },
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "upload failed";
     if (message === "PDF parsing timed out") {
